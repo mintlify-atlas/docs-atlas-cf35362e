@@ -1,0 +1,258 @@
+{
+  "projectType": "saas",
+  "projectName": "ClickNLearn",
+  "projectDescription": "An interactive learning platform for mastering C#, .NET, Oracle, and REST API development",
+  "theme": "palm",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#1E40AF",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Get Started",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["introduction", "getting-started"]
+          }
+        ]
+      },
+      {
+        "tab": "C# Fundamentals",
+        "groups": [
+          {
+            "group": "Language Features",
+            "pages": [
+              "csharp/advanced-linq",
+              "csharp/async-await",
+              "csharp/attribute-usage",
+              "csharp/class-structure",
+              "csharp/collection-internals",
+              "csharp/debugging",
+              "csharp/delegate-fundamentals",
+              "csharp/dynamic-programming",
+              "csharp/error-management",
+              "csharp/event-handling",
+              "csharp/file-system",
+              "csharp/generic-constraints",
+              "csharp/inheritance",
+              "csharp/memory-concepts",
+              "csharp/metadata",
+              "csharp/modern-syntax",
+              "csharp/query-syntax"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": ".NET Framework",
+        "groups": [
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "dotnet/clr",
+              "dotnet/bcl",
+              "dotnet/data-types",
+              "dotnet/oop"
+            ]
+          },
+          {
+            "group": "Data Access",
+            "pages": [
+              "dotnet/ado",
+              "dotnet/ef-core",
+              "dotnet/linq"
+            ]
+          },
+          {
+            "group": "Web Development",
+            "pages": [
+              "dotnet/web-api",
+              "dotnet/mvc",
+              "dotnet/web-forms",
+              "dotnet/win-forms"
+            ]
+          },
+          {
+            "group": "Advanced Topics",
+            "pages": [
+              "dotnet/async",
+              "dotnet/security",
+              "dotnet/perf",
+              "dotnet/deployment",
+              "dotnet/unit-testing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Code Quality",
+        "groups": [
+          {
+            "group": "Clean Code Principles",
+            "pages": [
+              "codesmells/clean-code",
+              "codesmells/formatting",
+              "codesmells/class-structure"
+            ]
+          },
+          {
+            "group": "Common Code Smells",
+            "pages": [
+              "codesmells/long-methods",
+              "codesmells/large-classes",
+              "codesmells/data-clumping",
+              "codesmells/feature-envy",
+              "codesmells/circular-deps",
+              "codesmells/hardcoded-deps"
+            ]
+          },
+          {
+            "group": "Design & Patterns",
+            "pages": [
+              "codesmells/inheritance",
+              "codesmells/inheritance-misuse",
+              "codesmells/conditional-complexity"
+            ]
+          },
+          {
+            "group": "Async & Concurrency",
+            "pages": [
+              "codesmells/async-await",
+              "codesmells/async-pitfalls",
+              "codesmells/concurrency"
+            ]
+          },
+          {
+            "group": "Error Handling",
+            "pages": [
+              "codesmells/error-management",
+              "codesmells/exception-strategy",
+              "codesmells/improper-disposals"
+            ]
+          },
+          {
+            "group": "Advanced Topics",
+            "pages": [
+              "codesmells/advanced-linq",
+              "codesmells/delegate-fundamentals",
+              "codesmells/event-handling",
+              "codesmells/generic-constraints",
+              "codesmells/attribute-usage",
+              "codesmells/dynamic-programming",
+              "codesmells/collection-internals",
+              "codesmells/memory-concepts",
+              "codesmells/memory-leaks",
+              "codesmells/file-system",
+              "codesmells/debugging",
+              "codesmells/low-coverage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Oracle & PL/SQL",
+        "groups": [
+          {
+            "group": "Database Fundamentals",
+            "pages": [
+              "oracle/sql-introduction",
+              "oracle/relational-database-concepts"
+            ]
+          },
+          {
+            "group": "SQL Basics",
+            "pages": [
+              "oracle/data-retrieval-select",
+              "oracle/filtering-data",
+              "oracle/sorting-data",
+              "oracle/joining-tables"
+            ]
+          },
+          {
+            "group": "Data Manipulation",
+            "pages": [
+              "oracle/dml",
+              "oracle/ddl",
+              "oracle/aggregate-functions",
+              "oracle/subqueries"
+            ]
+          },
+          {
+            "group": "PL/SQL Programming",
+            "pages": [
+              "oracle/plsql-basics",
+              "oracle/procedures-and-functions",
+              "oracle/packages",
+              "oracle/cursors",
+              "oracle/loops",
+              "oracle/conditional-logic",
+              "oracle/error-handling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "REST APIs",
+        "groups": [
+          {
+            "group": "API Fundamentals",
+            "pages": [
+              "restapi/api-introduction",
+              "restapi/internet-fundamentals",
+              "restapi/rest-principles"
+            ]
+          },
+          {
+            "group": "HTTP Protocol",
+            "pages": [
+              "restapi/http-methods",
+              "restapi/status-codes",
+              "restapi/req-res",
+              "restapi/data-formats"
+            ]
+          },
+          {
+            "group": "API Design",
+            "pages": [
+              "restapi/resource-modeling",
+              "restapi/endpoint-design",
+              "restapi/error-handling"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "restapi/auth-methods",
+              "restapi/authorization",
+              "restapi/security-practices"
+            ]
+          },
+          {
+            "group": "Advanced Topics",
+            "pages": [
+              "restapi/server-implementation",
+              "restapi/gateway",
+              "restapi/documentation",
+              "restapi/deployment-monitoring"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Comprehensive C# language fundamentals with advanced topics",
+    ".NET framework guides covering web, data access, and performance",
+    "Code quality and best practices with common code smell patterns",
+    "Oracle and PL/SQL database development tutorials",
+    "REST API design and implementation guides"
+  ],
+  "publicApiSurface": [
+    "C# Language Features: LINQ, Async/Await, Delegates, Events, Generics",
+    ".NET Framework: ASP.NET Web API, MVC, Entity Framework Core, ADO.NET",
+    "Code Quality: Clean Code Principles, SOLID, Design Patterns",
+    "Oracle: SQL, PL/SQL, Stored Procedures, Packages, Cursors",
+    "REST APIs: HTTP Methods, Authentication, Status Codes, Resource Modeling"
+  ]
+}
