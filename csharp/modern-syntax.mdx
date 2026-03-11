@@ -1,0 +1,167 @@
+---
+title: Modern Syntax
+description: Leverage modern C# syntax features for cleaner, more expressive code
+---
+
+This page covers modern C# syntax features that improve code readability and reduce boilerplate. These features represent the evolution of C# toward more expressive and concise code.
+
+<Note>
+Modern syntax features are compiler conveniences that generate the same IL code as their verbose equivalents, with no performance penalty.
+</Note>
+
+## Pattern Matching
+
+Pattern matching enables more expressive conditional logic:
+
+```csharp
+// Type pattern matching
+public string Describe(object obj)
+{
+    return obj switch
+    {
+        int i => $"Integer: {i}",
+        string s => $"String: {s}",
+        null => "Null value",
+        _ => "Unknown type"
+    };
+}
+
+// Property pattern matching
+public decimal CalculateDiscount(Order order)
+{
+    return order switch
+    {
+        { TotalAmount: > 1000, IsPremiumCustomer: true } => 0.20m,
+        { TotalAmount: > 500 } => 0.10m,
+        _ => 0.05m
+    };
+}
+```
+
+## Records
+
+Records provide immutable reference types with value-based equality:
+
+```csharp
+// Record declaration
+public record Person(string Name, int Age);
+
+// Usage
+var person1 = new Person("Alice", 30);
+var person2 = new Person("Alice", 30);
+
+Console.WriteLine(person1 == person2); // True (value equality)
+
+// With expressions for non-destructive mutation
+var person3 = person1 with { Age = 31 };
+```
+
+## Init-Only Properties
+
+Init-only properties can be set during object initialization but are immutable afterwards:
+
+```csharp
+public class Customer
+{
+    public string Name { get; init; }
+    public string Email { get; init; }
+}
+
+// Object initialization
+var customer = new Customer 
+{ 
+    Name = "John",
+    Email = "john@example.com"
+};
+
+// customer.Name = "Jane"; // Compiler error - cannot modify after initialization
+```
+
+<Info>
+Init-only properties enable immutable object initialization without verbose constructor boilerplate.
+</Info>
+
+## Null-Coalescing and Null-Conditional Operators
+
+```csharp
+// Null-coalescing (??) - provide default value
+string name = customer?.Name ?? "Unknown";
+
+// Null-conditional (?.) - safe navigation
+int? length = customer?.Name?.Length;
+
+// Null-coalescing assignment (??=)
+string _cache;
+public string GetValue()
+{
+    return _cache ??= ExpensiveOperation();
+}
+```
+
+## Target-Typed New
+
+```csharp
+// Traditional
+List<string> names = new List<string>();
+
+// Target-typed new (C# 9+)
+List<string> names = new();
+
+// Works with fields, properties, and return types
+public List<Customer> Customers { get; } = new();
+```
+
+## String Interpolation
+
+```csharp
+string name = "Alice";
+int age = 30;
+
+// String interpolation
+string message = $"Hello, {name}! You are {age} years old.";
+
+// With formatting
+decimal price = 123.456m;
+string formatted = $"Price: {price:C2}"; // Currency format
+
+// Verbatim interpolated strings
+string path = $@"C:\Users\{name}\Documents";
+```
+
+## Expression-Bodied Members
+
+```csharp
+public class Calculator
+{
+    // Expression-bodied method
+    public int Add(int a, int b) => a + b;
+    
+    // Expression-bodied property
+    public string FullName => $"{FirstName} {LastName}";
+    
+    // Expression-bodied constructor
+    public Calculator() => Console.WriteLine("Calculator created");
+    
+    // Expression-bodied finalizer
+    ~Calculator() => Console.WriteLine("Calculator disposed");
+}
+```
+
+<Tip>
+Use expression-bodied members for simple one-line implementations to improve code readability.
+</Tip>
+
+## Why Modern Syntax Matters
+
+1. **Code Clarity**: Reduces boilerplate, making intent clearer
+2. **Immutability**: Features like records and init-only properties encourage immutable designs
+3. **Safety**: Null-conditional operators reduce null reference exceptions
+
+## Roadmap Context
+
+Modern Syntax represents the evolution of C# toward more expressive code. Understanding these features enables:
+
+- Writing more maintainable code
+- Leveraging functional programming concepts
+- Adopting immutable design patterns
+- Improving code review efficiency

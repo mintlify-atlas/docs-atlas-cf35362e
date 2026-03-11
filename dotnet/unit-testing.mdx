@@ -1,0 +1,370 @@
+---
+title: 'Unit Testing in .NET'
+description: 'Build robust test suites with MSTest, NUnit, xUnit, mocking frameworks, and test-driven development practices'
+---
+
+## What is Unit Testing?
+
+Unit testing is a software testing methodology where individual units or components of code (typically methods or classes) are tested in isolation to verify that they work as expected.
+
+<Info>
+The core purpose is to catch bugs early in the development cycle, ensure code correctness, and provide a safety net for refactoring. Unit tests solve the problem of regression by automatically verifying that existing functionality continues to work as the codebase evolves.
+</Info>
+
+## How it works in C#
+
+### Test Frameworks
+
+C# offers several popular unit testing frameworks, each with similar capabilities but different syntax and features:
+
+<Note>
+- **MSTest**: Microsoft's official testing framework, integrated with Visual Studio
+- **NUnit**: A mature, widely-used framework with rich assertion library
+- **xUnit**: A modern framework designed by the creators of NUnit, popular in the .NET Core community
+</Note>
+
+```csharp
+// MSTest Example
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+[TestClass]
+public class CalculatorTests
+{
+    [TestMethod]
+    public void Add_TwoPositiveNumbers_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+        
+        // Act
+        int result = calculator.Add(5, 3);
+        
+        // Assert
+        Assert.AreEqual(8, result);
+    }
+}
+
+// xUnit Example
+using Xunit;
+
+public class CalculatorTests
+{
+    [Fact]
+    public void Add_TwoPositiveNumbers_ReturnsSum()
+    {
+        // Arrange
+        var calculator = new Calculator();
+        
+        // Act
+        int result = calculator.Add(5, 3);
+        
+        // Assert
+        Assert.Equal(8, result);
+    }
+    
+    [Theory]
+    [InlineData(5, 3, 8)]
+    [InlineData(10, 20, 30)]
+    [InlineData(-5, 5, 0)]
+    public void Add_VariousInputs_ReturnsCorrectSum(int a, int b, int expected)
+    {
+        // Arrange
+        var calculator = new Calculator();
+        
+        // Act
+        int result = calculator.Add(a, b);
+        
+        // Assert
+        Assert.Equal(expected, result);
+    }
+}
+```
+
+### Mocking Frameworks
+
+<Tip>
+Mocking frameworks allow you to create fake implementations of dependencies, enabling you to test units in isolation. Popular frameworks include Moq, NSubstitute, and FakeItEasy.
+</Tip>
+
+```csharp
+using Moq;
+using Xunit;
+
+public interface IEmailService
+{
+    void SendEmail(string to, string subject, string body);
+}
+
+public class UserService
+{
+    private readonly IEmailService _emailService;
+    
+    public UserService(IEmailService emailService)
+    {
+        _emailService = emailService;
+    }
+    
+    public void RegisterUser(string email)
+    {
+        // Registration logic...
+        _emailService.SendEmail(email, "Welcome", "Thanks for registering!");
+    }
+}
+
+public class UserServiceTests
+{
+    [Fact]
+    public void RegisterUser_SendsWelcomeEmail()
+    {
+        // Arrange
+        var mockEmailService = new Mock<IEmailService>();
+        var userService = new UserService(mockEmailService.Object);
+        
+        // Act
+        userService.RegisterUser("test@example.com");
+        
+        // Assert
+        mockEmailService.Verify(x => x.SendEmail(
+            "test@example.com", 
+            "Welcome", 
+            "Thanks for registering!"), 
+            Times.Once);
+    }
+}
+
+// NSubstitute Example (cleaner syntax)
+using NSubstitute;
+
+public class UserServiceTests
+{
+    [Fact]
+    public void RegisterUser_SendsWelcomeEmail()
+    {
+        // Arrange
+        var emailService = Substitute.For<IEmailService>();
+        var userService = new UserService(emailService);
+        
+        // Act
+        userService.RegisterUser("test@example.com");
+        
+        // Assert
+        emailService.Received().SendEmail(
+            "test@example.com", 
+            "Welcome", 
+            "Thanks for registering!");
+    }
+}
+```
+
+### Test Organization
+
+<Note>
+Organizing tests properly makes them easier to maintain and understand. Follow the AAA pattern (Arrange, Act, Assert) and use descriptive test names.
+</Note>
+
+```csharp
+public class OrderServiceTests
+{
+    // Test class naming: [ClassUnderTest]Tests
+    // Test method naming: [MethodName]_[Scenario]_[ExpectedBehavior]
+    
+    [Fact]
+    public void PlaceOrder_WithValidItems_CreatesOrder()
+    {
+        // Arrange
+        var repository = Substitute.For<IOrderRepository>();
+        var service = new OrderService(repository);
+        var items = new List<OrderItem> { new OrderItem { ProductId = 1, Quantity = 2 } };
+        
+        // Act
+        var order = service.PlaceOrder(items);
+        
+        // Assert
+        Assert.NotNull(order);
+        Assert.Equal(OrderStatus.Pending, order.Status);
+        repository.Received().Save(Arg.Any<Order>());
+    }
+    
+    [Fact]
+    public void PlaceOrder_WithEmptyItems_ThrowsException()
+    {
+        // Arrange
+        var repository = Substitute.For<IOrderRepository>();
+        var service = new OrderService(repository);
+        var items = new List<OrderItem>();
+        
+        // Act & Assert
+        Assert.Throws<ArgumentException>(() => service.PlaceOrder(items));
+    }
+}
+```
+
+### Test Coverage
+
+<Info>
+Test coverage measures the percentage of code that is executed by your tests. While 100% coverage doesn't guarantee bug-free code, it helps identify untested areas.
+</Info>
+
+```bash
+# Using dotnet CLI to generate coverage report
+dotnet test --collect:"XPlat Code Coverage"
+
+# Using ReportGenerator to create readable HTML reports
+reportgenerator -reports:"coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+```
+
+### Test-Driven Development (TDD)
+
+<Tip>
+TDD is a development approach where you write tests before writing the implementation code. The cycle is: Red (write failing test) → Green (write minimal code to pass) → Refactor.
+</Tip>
+
+```csharp
+// Step 1: Write the test first (RED)
+[Fact]
+public void CalculateDiscount_For100DollarsOrder_Returns10PercentDiscount()
+{
+    // Arrange
+    var calculator = new DiscountCalculator();
+    
+    // Act
+    decimal discount = calculator.CalculateDiscount(100);
+    
+    // Assert
+    Assert.Equal(10, discount);
+}
+
+// Step 2: Write minimal code to pass (GREEN)
+public class DiscountCalculator
+{
+    public decimal CalculateDiscount(decimal orderAmount)
+    {
+        if (orderAmount >= 100)
+            return orderAmount * 0.10m;
+        return 0;
+    }
+}
+
+// Step 3: Refactor if needed while keeping tests green
+```
+
+### Integration vs Unit Tests
+
+<Warning>
+While unit tests test components in isolation, integration tests verify that multiple components work together. Both are important but serve different purposes.
+</Warning>
+
+```csharp
+// Unit Test - Tests a single component in isolation
+[Fact]
+public void ValidateEmail_WithInvalidFormat_ReturnsFalse()
+{
+    var validator = new EmailValidator();
+    bool isValid = validator.Validate("invalid-email");
+    Assert.False(isValid);
+}
+
+// Integration Test - Tests multiple components together
+[Fact]
+public async Task CreateUser_WithValidData_SavesToDatabase()
+{
+    // Arrange - Using a real test database
+    var options = new DbContextOptionsBuilder<AppDbContext>()
+        .UseInMemoryDatabase("TestDb")
+        .Options;
+    
+    using var context = new AppDbContext(options);
+    var repository = new UserRepository(context);
+    var service = new UserService(repository);
+    
+    // Act
+    await service.CreateUserAsync("test@example.com", "John Doe");
+    
+    // Assert
+    var user = await context.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
+    Assert.NotNull(user);
+    Assert.Equal("John Doe", user.Name);
+}
+```
+
+## Why is Unit Testing important?
+
+1. **Early Bug Detection**: Catching bugs during development is exponentially cheaper than finding them in production.
+
+2. **Refactoring Confidence**: Tests provide a safety net that allows you to refactor code with confidence, knowing that breaking changes will be caught immediately.
+
+3. **Documentation**: Well-written tests serve as living documentation, showing how the code is intended to be used.
+
+4. **Design Improvement**: Writing tests forces you to think about dependencies and interfaces, leading to better, more modular design.
+
+## Advanced Nuances
+
+### Test Doubles: Mocks, Stubs, Fakes, and Spies
+
+<Note>
+- **Mock**: Verifies that specific methods were called with expected parameters
+- **Stub**: Returns predetermined values, doesn't verify interactions
+- **Fake**: Working implementation, but simplified (e.g., in-memory database)
+- **Spy**: Records information about how it was used
+</Note>
+
+```csharp
+// Stub - Returns predetermined value
+var stubRepository = Substitute.For<IProductRepository>();
+stubRepository.GetById(1).Returns(new Product { Id = 1, Name = "Test" });
+
+// Mock - Verifies interactions
+var mockLogger = Substitute.For<ILogger>();
+service.DoSomething();
+mockLogger.Received().Log("Expected log message");
+```
+
+### Parameterized Tests
+
+```csharp
+[Theory]
+[MemberData(nameof(DiscountTestData))]
+public void CalculateDiscount_VariousAmounts_ReturnsCorrectDiscount(decimal amount, decimal expected)
+{
+    var calculator = new DiscountCalculator();
+    decimal result = calculator.CalculateDiscount(amount);
+    Assert.Equal(expected, result);
+}
+
+public static IEnumerable<object[]> DiscountTestData =>
+    new List<object[]>
+    {
+        new object[] { 50m, 0m },
+        new object[] { 100m, 10m },
+        new object[] { 200m, 20m }
+    };
+```
+
+### Testing Async Code
+
+```csharp
+[Fact]
+public async Task GetDataAsync_ReturnsExpectedResult()
+{
+    // Arrange
+    var service = new DataService();
+    
+    // Act
+    var result = await service.GetDataAsync();
+    
+    // Assert
+    Assert.NotNull(result);
+}
+```
+
+## How this fits the Roadmap
+
+Unit testing is a **fundamental prerequisite** for professional .NET development. It unlocks:
+
+- **Test-Driven Development (TDD)**: Writing tests first to drive design
+- **Continuous Integration/Continuous Deployment (CI/CD)**: Automated testing in build pipelines
+- **Refactoring with Confidence**: Making code changes without fear of breaking existing functionality
+- **Domain-Driven Design (DDD)**: Testing domain logic in isolation
+- **Microservices Testing**: Testing service boundaries and contracts
+
+Mastering unit testing transforms you from a developer who writes code to one who writes **verified, maintainable, production-ready** code.

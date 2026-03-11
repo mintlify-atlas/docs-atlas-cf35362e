@@ -1,0 +1,172 @@
+---
+title: Delegate Fundamentals
+description: Master delegates as type-safe function pointers with multicast, covariance, and Action/Func patterns
+---
+
+**Delegate Fundamentals** are the foundation for treating methods as first-class objects in C#. At its core, a delegate is a type-safe function pointer; it defines a signature (return type and parameters) that compatible methods can be assigned to. The core purpose is to enable decoupled communication between components.
+
+## Multicast
+
+A multicast delegate is a delegate that can hold references to more than one method. When invoked, it calls each method in its invocation list in order. This is the underlying mechanism for events in C#.
+
+```csharp
+// 1. Define a delegate with a void return type (suitable for multicast)
+public delegate void LogMessage(string message);
+
+class Program
+{
+    static void LogToConsole(string msg)
+    {
+        Console.WriteLine($"Console: {msg}");
+    }
+
+    static void LogToFile(string msg)
+    {
+        // Simulate file logging
+        System.IO.File.AppendAllText("log.txt", $"File: {msg}\n");
+    }
+
+    static void Main()
+    {
+        // 2. Create a delegate instance and add multiple methods using +=
+        LogMessage logger = LogToConsole;
+        logger += LogToFile; // Multicast: Adds LogToFile to the invocation list
+        logger += LogToConsole; // Can even add the same method twice
+
+        // 3. Invoking 'logger' calls all methods in the list
+        logger("Application started!"); 
+        // Output:
+        // Console: Application started!
+        // Console: Application started!
+        // (And writes to "log.txt")
+
+        // 4. Remove a method from the list
+        logger -= LogToFile;
+        logger("File logger removed.");
+    }
+}
+```
+
+<Warning>
+**Exception Handling:** If a method in a multicast delegate's invocation list throws an exception, subsequent methods are not invoked. The exception propagates up immediately.
+</Warning>
+
+## Covariance
+
+Covariance with delegates allows a method to return a more derived type than what is specified by the delegate's return type. This provides flexibility when assigning methods to delegates, aligning with the Liskov Substitution Principle.
+
+```csharp
+// Base and derived classes
+class Animal { public string Name = "Animal"; }
+class Giraffe : Animal { public string Name = "Giraffe"; }
+
+// 1. Delegate defined to return a base type 'Animal'
+public delegate Animal AnimalFactory();
+
+class Program
+{
+    // 2. A method that returns the more derived type 'Giraffe'
+    static Giraffe CreateGiraffe() 
+    {
+        return new Giraffe();
+    }
+
+    static void Main()
+    {
+        // 3. Covariance in action: Assigning a method returning 'Giraffe'
+        // to a delegate expecting a return type of 'Animal'. This is allowed.
+        AnimalFactory factory = CreateGiraffe;
+
+        // 4. Invoke the delegate. The return type is 'Animal', but the actual object is a 'Giraffe'.
+        Animal animal = factory();
+        Console.WriteLine(animal.Name); // Output: Giraffe
+    }
+}
+```
+
+<Info>
+**Contravariance:** While covariance applies to return types, contravariance applies to parameters. A delegate can point to a method that accepts a less derived (more general) parameter type.
+</Info>
+
+## Action/Func
+
+`Action` and `Func` are generic delegate types provided by the .NET Framework, eliminating the need to manually define custom delegate types for most scenarios.
+
+- **Action**: Represents a method that does not return a value (`void`)
+- **Func**: Represents a method that returns a value
+
+```csharp
+using System;
+
+class Program
+{
+    static void Main()
+    {
+        // --- Using Action\<T\> for void methods ---
+        // Action<string> is equivalent to: delegate void SomeDelegate(string message);
+        Action<string> consoleLogger = (message) => Console.WriteLine($"LOG: {message}");
+        consoleLogger("Hello Action!"); // Invokes the lambda expression
+
+        // Action can have multiple parameters: Action<T1, T2>
+        Action<string, int> repeatLogger = (msg, count) =>
+        {
+            for (int i = 0; i < count; i++) Console.WriteLine(msg);
+        };
+        repeatLogger("Repeat!", 3);
+
+        // --- Using Func<T, TResult> for methods with return values ---
+        // Func<int, int, string> is equivalent to: delegate string SomeDelegate(int a, int b);
+        Func<int, int, string> sumFormatter = (a, b) => $"The sum is {a + b}";
+        string result = sumFormatter(5, 3);
+        Console.WriteLine(result); // Output: The sum is 8
+
+        // Func with no input parameters, just a return type: Func<string>
+        Func<DateTime> getCurrentTime = () => DateTime.Now;
+        Console.WriteLine($"Current time: {getCurrentTime()}");
+    }
+}
+```
+
+<Tip>
+**Modern C# Practice:** Use `Action` and `Func` instead of defining custom delegates unless you need specific naming for clarity.
+</Tip>
+
+## Why Delegate Fundamentals are Important
+
+1. **Strategy Pattern (Open/Closed Principle)**: Delegates allow you to inject specific algorithms or behaviors into a class
+2. **Event-Driven Architecture (Loose Coupling)**: They are the bedrock of the .NET eventing system
+3. **Powering LINQ and Functional Programming**: Delegates enable LINQ queries and functional programming concepts
+
+## Advanced Nuances
+
+### Safe Multicast Invocation
+
+```csharp
+logger += (s) => throw new InvalidOperationException("Demo exception!");
+logger += LogToConsole; // This method will never be called if the previous one throws.
+
+// Safe invocation
+foreach (LogMessage handler in logger.GetInvocationList())
+{
+    try { handler("test"); }
+    catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+}
+```
+
+### Delegate Inference and Method Group Conversion
+
+The compiler can often infer the delegate type, allowing for very concise syntax:
+
+```csharp
+// Instead of: button.Click += new EventHandler(OnButtonClick);
+button.Click += OnButtonClick; // Method group conversion
+```
+
+## Roadmap Context
+
+Delegate Fundamentals are the absolute prerequisite for the entire "Delegates and Events" section. This foundational knowledge **unlocks**:
+
+- **Events**: Built on top of multicast delegates with encapsulation
+- **Lambda Expressions & Anonymous Methods**: Shorthand ways to create delegate instances
+- **Functional Programming Patterns**: Higher-order functions implemented using delegates
+- **Asynchronous Programming**: `async` and `await` rely heavily on delegates under the hood

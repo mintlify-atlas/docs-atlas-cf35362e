@@ -1,0 +1,299 @@
+---
+title: 'Resource Modeling'
+description: 'Designing consistent, discoverable, and intuitive APIs by mapping business entities to RESTful resources'
+---
+
+## What is Resource Modeling?
+
+**Resource Modeling** (often called **Resource-Oriented Design** or **Resource-Centric Architecture**) is an API design approach where you model your API around resources—distinct entities that clients can interact with through standardized HTTP operations. The core purpose is to create consistent, discoverable, and intuitive APIs by mapping business entities to RESTful resources. It solves the problem of inconsistent API design patterns that make APIs difficult to learn, maintain, and consume.
+
+## How it works in C#
+
+### Noun-Based Resources
+
+**Explanation**: Resources should be modeled as nouns (things) rather than verbs (actions). This aligns with REST principles where HTTP methods (GET, POST, PUT, DELETE) already represent the actions.
+
+```csharp
+// GOOD: Noun-based resources
+[ApiController]
+[Route("api/products")] // Noun, plural
+public class ProductsController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetProducts() { /* returns list */ }
+    
+    [HttpPost]
+    public IActionResult CreateProduct(ProductDto product) { /* creates resource */ }
+}
+
+// AVOID: Verb-based endpoints
+[Route("api/productOperations")]
+public class ProductOperationsController : ControllerBase
+{
+    [HttpPost("create")] // Verb in URL - not RESTful
+    public IActionResult Create() { /* ... */ }
+}
+```
+
+<Info>
+Use nouns for resources and let HTTP methods convey the action.
+</Info>
+
+### Relationships
+
+**Explanation**: Resources often relate to each other. Model these relationships hierarchically in your URL structure and through resource references.
+
+```csharp
+[ApiController]
+public class OrdersController : ControllerBase
+{
+    // GET api/customers/5/orders - Get orders for customer 5
+    [HttpGet("api/customers/{customerId}/orders")]
+    public async Task<ActionResult<List<OrderDto>>> GetCustomerOrders(int customerId)
+    {
+        var orders = await _orderService.GetByCustomerIdAsync(customerId);
+        return Ok(orders.Select(o => o.ToDto()));
+    }
+
+    // POST api/customers/5/orders - Create order for customer 5
+    [HttpPost("api/customers/{customerId}/orders")]
+    public async Task<ActionResult<OrderDto>> CreateOrder(int customerId, CreateOrderDto request)
+    {
+        var order = await _orderService.CreateAsync(customerId, request);
+        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order.ToDto());
+    }
+}
+
+// Resource DTO with relationship references
+public class OrderDto
+{
+    public int Id { get; set; }
+    public decimal Total { get; set; }
+    public string Status { get; set; }
+    
+    // Reference to related resource (HATEOAS-style)
+    public string CustomerUrl { get; set; } // "/api/customers/5"
+    
+    // Or embedded ID (simpler approach)
+    public int CustomerId { get; set; }
+}
+```
+
+### Plural Naming
+
+**Explanation**: Use plural nouns for resource collections to indicate you're working with sets of resources.
+
+```csharp
+// CORRECT: Plural resource names
+[Route("api/products")]        // Collection of products
+[Route("api/users")]           // Collection of users  
+[Route("api/orders")]          // Collection of orders
+
+// Example with plural naming throughout
+[ApiController]
+[Route("api/products")]
+public class ProductsController : ControllerBase
+{
+    [HttpGet] // GET api/products - get collection
+    public IActionResult GetProducts() => Ok(_products);
+    
+    [HttpGet("{id}")] // GET api/products/5 - get specific resource
+    public IActionResult GetProduct(int id) => Ok(_products.Find(p => p.Id == id));
+    
+    [HttpPost] // POST api/products - create new resource in collection
+    public IActionResult CreateProduct(ProductDto product) { /* ... */ }
+}
+```
+
+<Note>
+Consistency in plural naming makes your API predictable and easier to understand.
+</Note>
+
+### Versioning
+
+**Explanation**: API versioning is crucial for maintaining backward compatibility. Common approaches include URL-based versioning, query string versioning, or header-based versioning.
+
+```csharp
+// URL-based versioning (most common)
+[ApiController]
+[Route("api/v{version:apiVersion}/products")]
+[ApiVersion("1.0")]
+public class ProductsControllerV1 : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetProducts()
+    {
+        // V1 response - simple structure
+        var products = _productService.GetAll();
+        return Ok(products.Select(p => new ProductDtoV1 
+        { 
+            Id = p.Id, 
+            Name = p.Name, 
+            Price = p.Price 
+        }));
+    }
+}
+
+[Route("api/v{version:apiVersion}/products")]
+[ApiVersion("2.0")]
+public class ProductsControllerV2 : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetProducts()
+    {
+        // V2 response - enhanced structure
+        var products = _productService.GetAll();
+        return Ok(products.Select(p => new ProductDtoV2 
+        { 
+            Id = p.Id,
+            Name = p.Name,
+            Price = p.Price,
+            Category = p.Category, // New field
+            CreatedDate = p.CreatedDate // New field
+        }));
+    }
+}
+
+// Configure versioning in Program.cs
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+});
+```
+
+### Pagination
+
+**Explanation**: For large collections, pagination prevents overwhelming clients with huge responses and improves performance.
+
+```csharp
+[ApiController]
+[Route("api/products")]
+public class ProductsController : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<PagedResponse<ProductDto>>> GetProducts(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string sortBy = "name")
+    {
+        // Validate pagination parameters
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        
+        var (products, totalCount) = await _productService.GetPagedAsync(page, pageSize, sortBy);
+        
+        // Build pagination response with metadata
+        var response = new PagedResponse<ProductDto>
+        {
+            Data = products.Select(p => p.ToDto()),
+            Pagination = new PaginationMetadata
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            }
+        };
+        
+        return Ok(response);
+    }
+}
+
+// Pagination response model
+public class PagedResponse\<T\>
+{
+    public IEnumerable\<T\> Data { get; set; }
+    public PaginationMetadata Pagination { get; set; }
+}
+
+public class PaginationMetadata
+{
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalCount { get; set; }
+    public int TotalPages { get; set; }
+    
+    // Optional: Add URLs for next/previous pages (HATEOAS)
+    public string NextPageUrl { get; set; }
+    public string PreviousPageUrl { get; set; }
+}
+```
+
+<Tip>
+Always include pagination metadata to help clients navigate through large result sets.
+</Tip>
+
+### Filtering/Sorting
+
+**Explanation**: Allow clients to filter and sort results based on resource properties using query parameters.
+
+```csharp
+[ApiController]
+[Route("api/products")]
+public class ProductsController : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<PagedResponse<ProductDto>>> GetProducts(
+        [FromQuery] ProductQueryParameters queryParams)
+    {
+        var filteredQuery = _dbContext.Products.AsQueryable();
+        
+        // Filtering
+        if (!string.IsNullOrEmpty(queryParams.Category))
+            filteredQuery = filteredQuery.Where(p => p.Category == queryParams.Category);
+        
+        if (queryParams.MinPrice.HasValue)
+            filteredQuery = filteredQuery.Where(p => p.Price >= queryParams.MinPrice);
+            
+        if (queryParams.MaxPrice.HasValue)
+            filteredQuery = filteredQuery.Where(p => p.Price <= queryParams.MaxPrice);
+        
+        // Sorting
+        filteredQuery = queryParams.SortBy?.ToLower() switch
+        {
+            "price" => queryParams.SortDescending ? 
+                      filteredQuery.OrderByDescending(p => p.Price) : 
+                      filteredQuery.OrderBy(p => p.Price),
+            "name" => queryParams.SortDescending ?
+                     filteredQuery.OrderByDescending(p => p.Name) :
+                     filteredQuery.OrderBy(p => p.Name),
+            _ => filteredQuery.OrderBy(p => p.Id)
+        };
+        
+        var totalCount = await filteredQuery.CountAsync();
+        var products = await filteredQuery
+            .Skip((queryParams.Page - 1) * queryParams.PageSize)
+            .Take(queryParams.PageSize)
+            .ToListAsync();
+            
+        return Ok(new PagedResponse<ProductDto> { Data = products.Select(p => p.ToDto()) });
+    }
+}
+
+public class ProductQueryParameters
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public string Category { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+    public string SortBy { get; set; } = "name";
+    public bool SortDescending { get; set; } = false;
+}
+```
+
+## Why is Resource Modeling Important?
+
+<Info>
+**Consistency (Uniform Interface Principle)**: Provides a predictable API structure that follows REST constraints, making APIs self-descriptive and easier for consumers to understand.
+</Info>
+
+<Info>
+**Scalability (Separation of Concerns)**: Separates resource representation from business logic, allowing independent evolution of API contracts and backend implementations.
+</Info>
+
+<Info>
+**Maintainability (DRY Principle)**: Centralizes common patterns like pagination and filtering into reusable components, reducing code duplication.
+</Info>

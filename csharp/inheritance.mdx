@@ -1,0 +1,220 @@
+---
+title: Inheritance and Polymorphism
+description: Master object-oriented design with abstract classes, virtual methods, and interface implementation
+---
+
+Inheritance is an object-oriented programming mechanism where a class (derived/child class) acquires properties and behaviors from another class (base/parent class). Polymorphism allows objects of different types to be treated as objects of a common base type, enabling method overriding and dynamic method dispatch.
+
+**Common Aliases:**
+- Inheritance: "IS-A" relationship, class hierarchy, derivation
+- Polymorphism: Method overriding, dynamic binding, runtime polymorphism
+
+## Abstract Classes
+
+Abstract classes are classes that cannot be instantiated directly and serve as base classes for other classes. They can contain both implemented methods and abstract methods (without implementation) that must be implemented by derived classes.
+
+```csharp
+// Base abstract class defining common structure
+public abstract class Shape
+{
+    protected string _name;
+    
+    // Abstract method - must be implemented by derived classes
+    public abstract double CalculateArea();
+    
+    // Concrete method with implementation
+    public virtual void Display()
+    {
+        Console.WriteLine($"Shape: {_name}");
+    }
+    
+    // Constructor for base class
+    protected Shape(string name)
+    {
+        _name = name;
+    }
+}
+
+// Derived class implementing the abstract method
+public class Circle : Shape
+{
+    public double Radius { get; set; }
+    
+    public Circle(string name, double radius) : base(name)
+    {
+        Radius = radius;
+    }
+    
+    // Mandatory implementation of abstract method
+    public override double CalculateArea()
+    {
+        return Math.PI * Radius * Radius;
+    }
+    
+    // Optional override of virtual method
+    public override void Display()
+    {
+        Console.WriteLine($"Circle '{_name}' with radius {Radius}");
+    }
+}
+```
+
+<Info>
+Abstract classes provide a template for derived classes while allowing partial implementation.
+</Info>
+
+## Virtual Methods
+
+Virtual methods are methods in a base class that can be overridden in derived classes using the `override` keyword. They enable runtime polymorphism by allowing the most derived implementation to be called.
+
+```csharp
+public class Vehicle
+{
+    public string Model { get; set; }
+    
+    // Virtual method - can be overridden by derived classes
+    public virtual void StartEngine()
+    {
+        Console.WriteLine($"Starting {Model} engine with key ignition");
+    }
+    
+    // Non-virtual method - cannot be overridden (only hidden with 'new')
+    public void StopEngine()
+    {
+        Console.WriteLine("Engine stopped");
+    }
+}
+
+public class ElectricCar : Vehicle
+{
+    // Overriding virtual method with specialized implementation
+    public override void StartEngine()
+    {
+        Console.WriteLine($"Starting {Model} with silent electric power");
+    }
+    
+    // Hiding base method (not recommended - use virtual/override pattern)
+    public new void StopEngine()
+    {
+        Console.WriteLine("Electric motor disengaged");
+    }
+}
+
+// Usage demonstrating polymorphism
+Vehicle myCar = new ElectricCar { Model = "Tesla Model S" };
+myCar.StartEngine(); // Calls ElectricCar's implementation due to polymorphism
+```
+
+<Warning>
+**Method Hiding vs. Overriding:** Use `override` for polymorphism. The `new` keyword hides the base method but doesn't provide true polymorphic behavior.
+</Warning>
+
+## Interface Implementation
+
+Interfaces define contracts that classes must implement. Unlike abstract classes, interfaces contain only method signatures without implementations (prior to C# 8.0). A class can implement multiple interfaces.
+
+```csharp
+// Interface defining a contract
+public interface ILoggable
+{
+    void Log(string message);
+    string GetLogHeader();
+}
+
+public interface IIdentifiable
+{
+    Guid Id { get; }
+}
+
+// Class implementing multiple interfaces
+public class DatabaseService : ILoggable, IIdentifiable
+{
+    public Guid Id { get; } = Guid.NewGuid();
+    private List<string> _logEntries = new List<string>();
+    
+    // Explicit interface implementation
+    void ILoggable.Log(string message)
+    {
+        _logEntries.Add($"{DateTime.Now}: {message}");
+    }
+    
+    string ILoggable.GetLogHeader()
+    {
+        return $"Database Service {Id} - Log entries: {_logEntries.Count}";
+    }
+    
+    // Regular class method
+    public void ClearLogs()
+    {
+        _logEntries.Clear();
+    }
+}
+
+// Usage with interface-based polymorphism
+ILoggable logger = new DatabaseService();
+logger.Log("Database connection established");
+Console.WriteLine(logger.GetLogHeader());
+```
+
+<Tip>
+**Multiple Inheritance:** Interfaces enable a form of multiple inheritance in C#, as a class can implement multiple interfaces.
+</Tip>
+
+## Why Inheritance and Polymorphism Matter
+
+1. **DRY Principle**: Inheritance eliminates code duplication by allowing common functionality to be defined once
+2. **Open/Closed Principle (SOLID)**: Polymorphism enables systems to be open for extension but closed for modification
+3. **Liskov Substitution Principle (SOLID)**: Proper inheritance ensures derived classes can substitute base classes
+
+## Advanced Nuances
+
+### Covariant Return Types (C# 9.0+)
+
+```csharp
+public abstract class Animal
+{
+    public abstract Animal Clone();
+}
+
+public class Dog : Animal
+{
+    // Covariant return type - can return more derived type
+    public override Dog Clone()
+    {
+        return new Dog();
+    }
+}
+```
+
+### Explicit Interface Implementation for Diamond Problem
+
+```csharp
+interface IA { void Method(); }
+interface IB { void Method(); }
+
+class Diamond : IA, IB
+{
+    // Explicit implementations resolve method ambiguity
+    void IA.Method() => Console.WriteLine("IA implementation");
+    void IB.Method() => Console.WriteLine("IB implementation");
+}
+```
+
+### Protected Internal Access Modifier
+
+```csharp
+public class BaseClass
+{
+    // Accessible within same assembly OR by derived classes in any assembly
+    protected internal string HybridAccessField;
+}
+```
+
+## Roadmap Context
+
+In the "Object Oriented Programming" section, Inheritance and Polymorphism serve as the foundation for more advanced concepts:
+
+- **Design Patterns**: Factory, Strategy, Template Method patterns
+- **Dependency Injection**: Modern DI containers use polymorphism extensively
+- **Entity Framework & ORM**: Navigation properties and inheritance mapping
+- **ASP.NET Core Middleware**: Pipeline pattern using polymorphism

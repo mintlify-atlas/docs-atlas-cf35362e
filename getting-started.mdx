@@ -1,0 +1,268 @@
+---
+title: Getting Started
+description: Begin your learning journey with ClickNLearn
+---
+
+Welcome to ClickNLearn! This guide will help you navigate the platform and choose the right learning path for your goals.
+
+## Choose Your Learning Path
+
+ClickNLearn offers five comprehensive learning tracks. Choose based on your current skill level and career goals:
+
+<CardGroup cols={2}>
+  <Card title="C# Fundamentals Track" icon="code" href="/csharp/advanced-linq">
+    Start here if you're new to C# or want to master advanced language features
+  </Card>
+  <Card title=".NET Framework Track" icon="window" href="/dotnet/clr">
+    Perfect for building web applications, APIs, and enterprise solutions
+  </Card>
+  <Card title="Code Quality Track" icon="shield-check" href="/codesmells/clean-code">
+    Learn to write maintainable, professional-grade code
+  </Card>
+  <Card title="Oracle & PL/SQL Track" icon="database" href="/oracle/sql-introduction">
+    Master database development and data management
+  </Card>
+  <Card title="REST API Track" icon="globe" href="/restapi/api-introduction">
+    Design and build modern web services
+  </Card>
+</CardGroup>
+
+## Recommended Learning Paths
+
+### For Complete Beginners
+
+If you're new to software development, we recommend this sequence:
+
+<Steps>
+  <Step title="Start with C# Fundamentals">
+    Begin with [C# Language Features](/csharp/class-structure) to understand object-oriented programming basics, then progress to advanced topics like LINQ and async/await.
+  </Step>
+  
+  <Step title="Learn .NET Core Concepts">
+    Move to [.NET Framework](/dotnet/clr) to understand the runtime environment, type system, and base class library.
+  </Step>
+  
+  <Step title="Master Code Quality">
+    Study [Clean Code Principles](/codesmells/clean-code) to write professional, maintainable code from the start.
+  </Step>
+  
+  <Step title="Build Web Applications">
+    Learn [ASP.NET Web API](/dotnet/web-api) to create your first web services and applications.
+  </Step>
+</Steps>
+
+### For Intermediate Developers
+
+If you already know C# basics and want to advance your skills:
+
+<Steps>
+  <Step title="Deepen Language Knowledge">
+    Study advanced topics like [Advanced LINQ](/csharp/advanced-linq), [Async/Await](/csharp/async-await), and [Memory Concepts](/csharp/memory-concepts).
+  </Step>
+  
+  <Step title="Master Data Access">
+    Learn [Entity Framework Core](/dotnet/ef-core) and [ADO.NET](/dotnet/ado) for database integration.
+  </Step>
+  
+  <Step title="Identify Code Smells">
+    Review [Common Code Smells](/codesmells/long-methods) to recognize and refactor problematic patterns.
+  </Step>
+  
+  <Step title="Optimize Performance">
+    Dive into [Performance Optimization](/dotnet/perf) and [Security Best Practices](/dotnet/security).
+  </Step>
+</Steps>
+
+### For Backend Developers
+
+If you're focusing on backend services and APIs:
+
+<Steps>
+  <Step title="Master REST Principles">
+    Start with [REST API Fundamentals](/restapi/rest-principles) and [HTTP Protocol](/restapi/http-methods).
+  </Step>
+  
+  <Step title="Learn ASP.NET Web API">
+    Build services with [ASP.NET Web API](/dotnet/web-api) and [MVC](/dotnet/mvc).
+  </Step>
+  
+  <Step title="Implement Authentication">
+    Secure your APIs with [Authentication Methods](/restapi/auth-methods) and [Security Practices](/restapi/security-practices).
+  </Step>
+  
+  <Step title="Master Database Integration">
+    Connect to databases using [Entity Framework Core](/dotnet/ef-core) or [Oracle PL/SQL](/oracle/plsql-basics).
+  </Step>
+</Steps>
+
+### For Database Developers
+
+If you're specializing in database development:
+
+<Steps>
+  <Step title="Learn SQL Fundamentals">
+    Begin with [SQL Introduction](/oracle/sql-introduction) and [Data Retrieval](/oracle/data-retrieval-select).
+  </Step>
+  
+  <Step title="Master PL/SQL">
+    Progress to [PL/SQL Basics](/oracle/plsql-basics) and [Stored Procedures](/oracle/procedures-and-functions).
+  </Step>
+  
+  <Step title="Build Complex Solutions">
+    Create reusable code with [Packages](/oracle/packages) and optimize with [Cursors](/oracle/cursors).
+  </Step>
+  
+  <Step title="Integrate with Applications">
+    Connect databases to applications using [ADO.NET](/dotnet/ado) or [Entity Framework Core](/dotnet/ef-core).
+  </Step>
+</Steps>
+
+## Navigation Tips
+
+<Info>
+Use the tabs at the top of the page to switch between different learning tracks. Each track is organized into logical groups that build upon each other.
+</Info>
+
+### Understanding the Structure
+
+Each learning track is organized into groups:
+
+- **C# Fundamentals**: Single comprehensive group covering all language features
+- **.NET Framework**: Four groups (Core Concepts, Data Access, Web Development, Advanced Topics)
+- **Code Quality**: Six groups organized by code smell categories
+- **Oracle & PL/SQL**: Four groups progressing from SQL basics to advanced PL/SQL
+- **REST APIs**: Five groups covering fundamentals through deployment
+
+### How to Use Each Page
+
+Every learning page follows a consistent structure:
+
+1. **Concept Introduction**: What the topic is and why it matters
+2. **How It Works**: Detailed explanations with code examples
+3. **Importance**: Why this concept is critical for professional development
+4. **Advanced Nuances**: Expert-level insights and edge cases
+5. **Roadmap Context**: How this topic fits into your overall learning journey
+
+## Best Practices for Learning
+
+<CardGroup cols={2}>
+  <Card title="Follow Sequential Order" icon="list-ol">
+    Topics build upon each other. Follow the recommended sequence within each track for best results.
+  </Card>
+  <Card title="Practice with Code" icon="code">
+    Type out all code examples yourself. Don't just read—write code to reinforce learning.
+  </Card>
+  <Card title="Build Projects" icon="hammer">
+    Apply what you learn by building small projects that combine multiple concepts.
+  </Card>
+  <Card title="Review Advanced Nuances" icon="brain">
+    Return to advanced nuances sections after mastering basics to deepen understanding.
+  </Card>
+</CardGroup>
+
+## Prerequisites
+
+### Development Environment
+
+To practice the concepts in ClickNLearn, you'll need:
+
+<CodeGroup>
+
+```bash Windows
+# Download and install Visual Studio 2022 Community Edition
+# https://visualstudio.microsoft.com/downloads/
+
+# Or install .NET SDK for command-line development
+winget install Microsoft.DotNet.SDK.8
+```
+
+```bash macOS
+# Install .NET SDK
+brew install --cask dotnet-sdk
+
+# Or download from Microsoft
+# https://dotnet.microsoft.com/download
+```
+
+```bash Linux
+# Ubuntu/Debian
+wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+sudo apt-get update
+sudo apt-get install -y dotnet-sdk-8.0
+
+# Or use your distribution's package manager
+```
+
+</CodeGroup>
+
+<Tip>
+For Oracle/PL-SQL topics, you can use [Oracle Database Express Edition (XE)](https://www.oracle.com/database/technologies/xe-downloads.html) or [Oracle Live SQL](https://livesql.oracle.com) for browser-based practice.
+</Tip>
+
+### Recommended Tools
+
+- **IDE**: Visual Studio 2022, Visual Studio Code, or JetBrains Rider
+- **Database Client**: SQL Developer, DBeaver, or Azure Data Studio
+- **API Testing**: Postman, Insomnia, or REST Client extension
+- **Version Control**: Git and GitHub/GitLab account
+
+## Quick Start Example
+
+Here's a simple example to verify your environment is set up correctly:
+
+```csharp Program.cs
+using System;
+using System.Linq;
+
+public class Program
+{
+    public static void Main()
+    {
+        // Simple LINQ query
+        var numbers = Enumerable.Range(1, 10);
+        var evenNumbers = numbers.Where(n => n % 2 == 0);
+        
+        Console.WriteLine("Even numbers from 1 to 10:");
+        foreach (var num in evenNumbers)
+        {
+            Console.WriteLine(num);
+        }
+    }
+}
+```
+
+Run this code to ensure your C# environment is working:
+
+```bash
+dotnet new console -n ClickNLearnTest
+cd ClickNLearnTest
+# Replace Program.cs with the code above
+dotnet run
+```
+
+<Check>
+If you see "Even numbers from 1 to 10: 2, 4, 6, 8, 10" printed, your environment is ready!
+</Check>
+
+## Get Help and Support
+
+<Card title="GitHub Repository" icon="github" href="https://github.com/anandstays-creator/clicknlearn">
+  Visit the GitHub repository for updates, issues, and community discussions
+</Card>
+
+## Next Steps
+
+Ready to dive in? Choose a learning path above and start your journey to mastering professional software development!
+
+<CardGroup cols={3}>
+  <Card title="C# Fundamentals" icon="code" href="/csharp/advanced-linq">
+    Start learning C#
+  </Card>
+  <Card title=".NET Framework" icon="window" href="/dotnet/clr">
+    Explore .NET
+  </Card>
+  <Card title="Code Quality" icon="shield-check" href="/codesmells/clean-code">
+    Write clean code
+  </Card>
+</CardGroup>

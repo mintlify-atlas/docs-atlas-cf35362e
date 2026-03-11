@@ -1,0 +1,179 @@
+---
+title: File System
+description: Master file I/O with stream readers/writers, memory streams, and async I/O for persistent data management
+---
+
+In C#, the **File System** refers to the collective set of classes and APIs provided by the .NET Framework (primarily within the `System.IO` namespace) for interacting with the computer's file system. This includes creating, reading, writing, moving, deleting, and managing files and directories.
+
+**Core Purpose:** To enable applications to persistently store and retrieve data from drives and storage devices. It solves the problem of data volatility in memory (RAM) by providing a means to save application state, user data, configuration, and logs to a permanent medium.
+
+## How it Works
+
+The `System.IO` namespace offers two main approaches:
+
+1. **Static Helper Classes (`File`, `Directory`, `Path`):** Simple, one-line methods for common operations
+2. **Stream-based Classes (`FileStream`, `StreamReader`, etc.):** Provide fine-grained control over the reading/writing process
+
+### Stream Readers/Writers
+
+These are layered classes built on top of a fundamental `Stream` (like `FileStream`). Their purpose is to simplify working with text or specific data types by handling encoding (e.g., UTF-8) and parsing.
+
+- **`StreamReader`:** Reads characters from a byte stream
+- **`StreamWriter`:** Writes characters to a byte stream
+
+```csharp
+string filePath = "log.txt";
+
+// Using StreamWriter to write text to a file
+// The 'using' statement ensures the file resource is closed and disposed properly.
+using (StreamWriter writer = new StreamWriter(filePath, append: true)) // Append to the end of the file
+{
+    writer.WriteLine("Error: Configuration file not found.");
+    writer.WriteLine($"Timestamp: {DateTime.Now}");
+}
+// At this point, the file handle is automatically closed.
+
+// Using StreamReader to read text from a file
+using (StreamReader reader = new StreamReader(filePath))
+{
+    string line;
+    // ReadLine returns null at the end of the file.
+    while ((line = reader.ReadLine()) != null)
+    {
+        Console.WriteLine($"Line read: {line}");
+    }
+}
+```
+
+<Info>
+**Best Practice:** Always use the `using` statement with streams to ensure proper resource disposal.
+</Info>
+
+### Memory Streams
+
+`MemoryStream` is a stream that uses memory (RAM) as its backing store instead of a disk or network. This is exceptionally useful for:
+
+- Testing IO logic without touching the physical disk
+- Manipulating data in memory as if it were a file
+- Converting objects to byte arrays and vice-versa
+
+```csharp
+// Create a string and convert it to bytes in memory.
+string originalData = "This data is in a MemoryStream!";
+byte[] dataBytes = Encoding.UTF8.GetBytes(originalData);
+
+// Create a MemoryStream from the byte array.
+using (MemoryStream memoryStream = new MemoryStream(dataBytes))
+{
+    // Now we can read from the MemoryStream as if it were a file.
+    using (StreamReader reader = new StreamReader(memoryStream))
+    {
+        string contentFromMemory = reader.ReadToEnd();
+        Console.WriteLine(contentFromMemory); // Outputs the original string.
+    }
+
+    // We can also write to the MemoryStream.
+    memoryStream.Seek(0, SeekOrigin.End); // Seek to the end of the stream.
+    byte[] appendBytes = Encoding.UTF8.GetBytes(" Appended text.");
+    memoryStream.Write(appendBytes, 0, appendBytes.Length);
+
+    // Get the final byte array from the stream.
+    byte[] finalBytes = memoryStream.ToArray();
+    string finalString = Encoding.UTF8.GetString(finalBytes);
+    Console.WriteLine(finalString);
+}
+```
+
+<Tip>
+**Use Case:** MemoryStreams are perfect for unit testing file operations without creating actual files on disk.
+</Tip>
+
+### Async IO
+
+Synchronous file operations (`Read`, `Write`) can block the calling thread, leading to unresponsive applications. **Asynchronous IO** (`ReadAsync`, `WriteAsync`) performs the disk-bound work in the background, freeing the calling thread.
+
+```csharp
+string largeFilePath = "large_data.dat";
+
+// Asynchronously write data to a file without blocking the main thread.
+async Task WriteToFileAsync()
+{
+    string dataToWrite = "This is being written asynchronously...";
+    using (StreamWriter writer = new StreamWriter(largeFilePath))
+    {
+        // await allows the thread to be freed while the write operation completes.
+        await writer.WriteAsync(dataToWrite);
+    }
+    Console.WriteLine("Write operation completed.");
+}
+
+// Asynchronously read data from a file.
+async Task<string> ReadFromFileAsync()
+{
+    using (StreamReader reader = new StreamReader(largeFilePath))
+    {
+        // The thread is not blocked while waiting for the disk read.
+        string content = await reader.ReadToEndAsync();
+        Console.WriteLine("Read operation completed.");
+        return content;
+    }
+}
+
+// Main method (typically marked async in a real application)
+static async Task Main(string[] args)
+{
+    await WriteToFileAsync();
+    string data = await ReadFromFileAsync();
+    Console.WriteLine(data);
+}
+```
+
+<Warning>
+**UI Responsiveness:** In UI applications, always use async I/O to prevent freezing the interface during file operations.
+</Warning>
+
+## Why the File System is Important
+
+1. **Data Persistence (DRY Principle):** Provides the "Persist" aspect - data survives application restarts
+2. **Separation of Concerns (SOLID):** `System.IO` classes have a single responsibility - handling file system interactions
+3. **Scalability and Performance:** Using streams and async IO enables handling large files efficiently
+
+## Advanced Nuances
+
+### File Sharing and Concurrency
+
+When using `FileStream`, consider what happens if another process tries to access the same file:
+
+```csharp
+// Specify file sharing permissions
+using (FileStream fs = new FileStream("data.txt", FileMode.Open, 
+    FileAccess.Read, FileShare.Read))
+{
+    // Other processes can also read the file
+}
+```
+
+### Buffering and Flushing
+
+Writers often use an internal buffer for performance:
+
+```csharp
+using (StreamWriter writer = new StreamWriter("log.txt"))
+{
+    writer.WriteLine("Critical log entry");
+    writer.Flush(); // Force immediate write to disk
+}
+```
+
+<Note>
+**Critical Data:** Always flush buffers before closing when working with critical data to ensure it's physically written to disk.
+</Note>
+
+## Roadmap Context
+
+Within the **"Serialization and IO"** section, the File System is the absolute **foundational prerequisite**. You cannot perform serialization without knowing how to write to files. **What it unlocks:**
+
+- All forms of serialization (JSON, XML, binary)
+- Advanced IO scenarios (ZIP, network streams, cryptographic streams)
+- Configuration management and logging
+- Repository patterns for data access

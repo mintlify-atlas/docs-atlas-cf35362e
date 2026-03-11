@@ -1,0 +1,241 @@
+---
+title: 'Data Definition Language (DDL)'
+description: 'Master SQL commands for defining, modifying, and managing database object structures'
+---
+
+## What is Data Definition Language (DDL)?
+
+**Data Definition Language (DDL)** is a subset of SQL commands specifically designed for defining, modifying, and managing the structure of database objects. It acts as the architectural blueprint for the database.
+
+<Note>
+Its core purpose is to solve the problem of schema management. Without DDL, there would be no programmatic way to create tables, alter their structure to accommodate new requirements, or remove obsolete objects.
+</Note>
+
+## DDL in PL/SQL Context
+
+A crucial nuance in PL/SQL is that DDL statements cannot be executed directly as standalone SQL statements within a PL/SQL block. To execute DDL from PL/SQL, you must use **Native Dynamic SQL (NDS)**, primarily the `EXECUTE IMMEDIATE` statement.
+
+<Warning>
+DDL statements issue an **implicit commit** before and after execution. This means you cannot roll back a DDL operation within a transaction.
+</Warning>
+
+## CREATE TABLE
+
+This command is used to create a new table in the database. You define the table's name, its columns (with their data types, precision, and constraints), primary keys, foreign keys, and other constraints.
+
+```plsql
+DECLARE
+BEGIN
+    -- Using EXECUTE IMMEDIATE to run DDL
+    EXECUTE IMMEDIATE '
+        CREATE TABLE employees_demo (
+            employee_id   NUMBER(6) PRIMARY KEY,
+            first_name    VARCHAR2(20),
+            last_name     VARCHAR2(25) NOT NULL,
+            email         VARCHAR2(25) NOT NULL UNIQUE,
+            hire_date     DATE DEFAULT SYSDATE NOT NULL,
+            department_id NUMBER(4)
+        )';
+    DBMS_OUTPUT.PUT_LINE('Table employees_demo created successfully.');
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error creating table: ' || SQLERRM);
+END;
+/
+```
+
+## ALTER TABLE
+
+This command modifies the structure of an existing table. It is incredibly versatile, allowing you to add new columns, drop existing columns, modify column data types, add constraints, or rename columns.
+
+<Info>
+ALTER TABLE is essential for schema evolution and adapting to changing business requirements.
+</Info>
+
+```plsql
+DECLARE
+BEGIN
+    -- Add a new column for a phone number
+    EXECUTE IMMEDIATE 'ALTER TABLE employees_demo ADD (phone_number VARCHAR2(15))';
+    DBMS_OUTPUT.PUT_LINE('Added phone_number column.');
+
+    -- Modify the precision of an existing column
+    EXECUTE IMMEDIATE 'ALTER TABLE employees_demo MODIFY (first_name VARCHAR2(30))';
+    DBMS_OUTPUT.PUT_LINE('Modified first_name column.');
+
+    -- Add a foreign key constraint
+    EXECUTE IMMEDIATE 'ALTER TABLE employees_demo ADD CONSTRAINT fk_emp_dept
+                       FOREIGN KEY (department_id) REFERENCES departments(department_id)';
+    DBMS_OUTPUT.PUT_LINE('Added foreign key constraint.');
+END;
+/
+```
+
+## DROP TABLE
+
+This command permanently removes a table and all its data from the database.
+
+<Warning>
+Use with extreme caution, as the operation is irreversible (unless you have a backup). The PURGE option bypasses the recycle bin.
+</Warning>
+
+```plsql
+DECLARE
+BEGIN
+    -- Drop the table and permanently purge it
+    EXECUTE IMMEDIATE 'DROP TABLE employees_demo PURGE';
+    DBMS_OUTPUT.PUT_LINE('Table employees_demo dropped.');
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Handle error if table doesn't exist
+        IF SQLCODE != -942 THEN -- ORA-00942: table or view does not exist
+            RAISE;
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('Table did not exist.');
+        END IF;
+END;
+/
+```
+
+## RENAME TABLE
+
+This command changes the name of an existing table. It's a simple yet critical operation for refactoring database schemas or adhering to new naming conventions.
+
+```plsql
+DECLARE
+BEGIN
+    -- Rename the table from 'employees_staging' to 'employees_archive'
+    EXECUTE IMMEDIATE 'RENAME employees_staging TO employees_archive';
+    DBMS_OUTPUT.PUT_LINE('Table renamed successfully.');
+END;
+/
+```
+
+## TRUNCATE TABLE
+
+This command quickly removes all rows from a table. It is a DDL statement, unlike `DELETE`, which is DML.
+
+<Tip>
+TRUNCATE is much faster than DELETE for large tables as it doesn't generate undo data for each row.
+</Tip>
+
+```plsql
+DECLARE
+BEGIN
+    -- Remove all data from the table, resetting the storage
+    EXECUTE IMMEDIATE 'TRUNCATE TABLE employees_archive';
+    DBMS_OUTPUT.PUT_LINE('Table truncated.');
+END;
+/
+```
+
+## CREATE INDEX
+
+Indexes are database objects that improve the speed of data retrieval operations at the cost of additional storage and slower writes. This command creates an index on one or more columns of a table.
+
+```plsql
+DECLARE
+BEGIN
+    -- Create an index on the last_name column for faster searches
+    EXECUTE IMMEDIATE 'CREATE INDEX idx_emp_last_name ON employees (last_name)';
+    DBMS_OUTPUT.PUT_LINE('Index idx_emp_last_name created.');
+END;
+/
+```
+
+## DROP INDEX
+
+This command removes an existing index. This might be done during performance tuning if an index is unused or detrimental to insert performance.
+
+```plsql
+DECLARE
+BEGIN
+    -- Drop the index
+    EXECUTE IMMEDIATE 'DROP INDEX idx_emp_last_name';
+    DBMS_OUTPUT.PUT_LINE('Index dropped.');
+END;
+/
+```
+
+## CREATE VIEW
+
+A view is a virtual table based on the result-set of a SQL query. It does not store data itself but presents data from one or more underlying tables.
+
+<Info>
+Views can simplify complex queries, enhance security by restricting data access, and provide a level of abstraction.
+</Info>
+
+```plsql
+DECLARE
+BEGIN
+    -- Create a view that joins employees and departments
+    EXECUTE IMMEDIATE '
+        CREATE OR REPLACE VIEW emp_dept_view AS
+        SELECT e.employee_id, e.last_name, e.department_id, d.department_name
+        FROM employees e
+        JOIN departments d ON e.department_id = d.department_id';
+    DBMS_OUTPUT.PUT_LINE('View emp_dept_view created.');
+END;
+/
+```
+
+## Why is DDL Important?
+
+### Schema Rigidity & Data Integrity
+
+DDL enforces data structure and constraints (e.g., `PRIMARY KEY`, `NOT NULL`, `FOREIGN KEY`), ensuring data adheres to business rules and maintains referential integrity, which is the cornerstone of the relational model.
+
+### Agile Schema Evolution
+
+The `ALTER TABLE` command allows for non-disruptive schema changes (like adding columns or indexes), enabling the database to scale and adapt to evolving application requirements without needing a complete rebuild.
+
+### Performance Abstraction
+
+Commands like `CREATE INDEX` and `CREATE VIEW` allow database administrators and developers to optimize query performance and create logical data abstractions without changing the underlying physical data model.
+
+## Advanced Nuances
+
+### DDL and Implicit Commit
+
+<Warning>
+A critical nuance is that DDL statements issue an implicit commit before and after execution. This breaks transactional atomicity.
+</Warning>
+
+For example, if you `INSERT` data and then `CREATE INDEX`, the `INSERT` is permanently committed.
+
+### Dynamic DDL with Bind Variables
+
+You cannot use bind variables for object names (like table or column names) in DDL statements with `EXECUTE IMMEDIATE`:
+
+```plsql
+-- This is NOT allowed for the object name:
+-- EXECUTE IMMEDIATE 'DROP TABLE :table_name' USING v_table_name; -- ERROR
+
+-- This is the correct, but careful, way:
+EXECUTE IMMEDIATE 'DROP TABLE ' || v_table_name; -- Potentially dangerous, validate v_table_name!
+
+-- This IS allowed for data values:
+EXECUTE IMMEDIATE 'CREATE TABLE new_emps AS SELECT * FROM employees WHERE salary > :sal' USING v_min_salary;
+```
+
+### Data Dictionary Impact
+
+DDL statements immediately update the Oracle Data Dictionary. This is why they require a commit and why they are powerful. The change in the database's structure is globally visible to all sessions as soon as the DDL completes.
+
+## How This Fits the Roadmap
+
+Within the "Advanced SQL Features" section of the PL/SQL Mastery roadmap, DDL is a **fundamental prerequisite**.
+
+### Prerequisites For:
+
+- **Global Temporary Tables**
+- **External Tables**
+- **Materialized Views**
+- **Advanced partitioning**
+
+### Unlocks:
+
+- **Dynamic SQL** mastery
+- **Database deployment and migration scripts**
+- **Transaction management** understanding
+- **DevOps and database administration** tasks

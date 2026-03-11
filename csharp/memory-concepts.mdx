@@ -1,0 +1,212 @@
+---
+title: Memory Concepts
+description: Understand stack vs heap allocation, garbage collection generations, and the Large Object Heap for optimal memory management
+---
+
+Memory Concepts in C# (also referred to as Memory Management Fundamentals) encompass the underlying principles and mechanisms that govern how the .NET runtime allocates, uses, and reclaims memory. The core purpose is to provide automatic memory management while maintaining application performance.
+
+## Stack vs. Heap
+
+The stack and heap are two distinct memory regions used for different purposes. The stack is a LIFO (Last-In-First-Out) structure that stores value types and method call information with fast allocation/deallocation. The heap is a dynamic memory pool for reference types, requiring garbage collection for cleanup.
+
+```csharp
+public class MemoryExample
+{
+    public void DemonstrateStackVsHeap()
+    {
+        // STACK ALLOCATION - Value types
+        int stackValue = 42;           // Stored directly on stack
+        DateTime stackDate = DateTime.Now; // Value type on stack
+        
+        // HEAP ALLOCATION - Reference types
+        var heapObject = new MyClass(100); // Object created on heap
+        string heapString = "Hello";     // Strings are reference types on heap
+        
+        // METHOD CALLS USE STACK FOR EXECUTION CONTEXT
+        ProcessData(stackValue, heapObject);
+    }
+    
+    private void ProcessData(int value, MyClass obj)
+    {
+        // Each method call creates a new stack frame
+        int result = value + obj.Value; // Mixed usage
+        Console.WriteLine(result);
+    }
+}
+
+public class MyClass
+{
+    public int Value { get; }
+    public MyClass(int value) => Value = value;
+}
+```
+
+<Info>
+**Performance:** Stack allocation is faster than heap allocation, but the stack has limited size. Use value types for small, short-lived data.
+</Info>
+
+## Garbage Collection Generations
+
+.NET uses a generational garbage collector with three generations (0, 1, 2) to optimize collection efficiency. Generation 0 contains newly allocated objects, Generation 1 serves as a buffer between short-lived and long-lived objects, and Generation 2 holds long-lived objects.
+
+```csharp
+public class GCGenerationsDemo
+{
+    public void DemonstrateGenerations()
+    {
+        var obj = new LargeObject();
+        
+        // Check initial generation (should be 0 for new objects)
+        int generation = GC.GetGeneration(obj);
+        Console.WriteLine($"Initial generation: {generation}"); // Output: 0
+        
+        // Force multiple collections to promote object through generations
+        GC.Collect(0); // Collect only Gen 0
+        generation = GC.GetGeneration(obj);
+        Console.WriteLine($"After Gen 0 collection: {generation}");
+        
+        GC.Collect(1); // Collect Gen 0 & 1
+        generation = GC.GetGeneration(obj);
+        Console.WriteLine($"After Gen 1 collection: {generation}");
+        
+        // Monitor memory pressure
+        long totalMemory = GC.GetTotalMemory(false);
+        Console.WriteLine($"Total memory: {totalMemory} bytes");
+    }
+}
+
+public class LargeObject
+{
+    private byte[] data = new byte[10000];
+    public byte[] Data => data;
+}
+```
+
+<Warning>
+**Avoid Forced GC:** Manually calling `GC.Collect()` is rarely necessary and can harm performance. Let the GC manage collections automatically.
+</Warning>
+
+## LOH (Large Object Heap)
+
+The Large Object Heap is a special heap for objects larger than 85,000 bytes. These objects are allocated directly into Generation 2 to avoid expensive Gen 0/1 promotions. The LOH is only collected during full GC cycles and isn't compacted by default, which can lead to fragmentation.
+
+```csharp
+public class LOHDemo
+{
+    public void DemonstrateLOH()
+    {
+        // Regular array (fits in normal heap)
+        byte[] smallArray = new byte[1000]; // Goes to normal heap
+        
+        // Large array - triggers LOH allocation
+        byte[] largeArray = new byte[85000]; // 85KB - goes to LOH
+        
+        // Check if object is in LOH
+        try
+        {
+            if (largeArray.GetType().IsArray)
+            {
+                bool isLOH = GC.GetGeneration(largeArray) == 2 
+                            && largeArray.Length * sizeof(byte) >= 85000;
+                Console.WriteLine($"Is LOH object: {isLOH}");
+            }
+        }
+        catch
+        {
+            // Alternative approach using size threshold
+            long threshold = 85000;
+            bool isLarge = largeArray.LongLength * sizeof(byte) >= threshold;
+            Console.WriteLine($"Is large object (>=85KB): {isLarge}");
+        }
+        
+        // LOH fragmentation demo
+        CreateAndDiscardLargeObjects();
+    }
+    
+    private void CreateAndDiscardLargeObjects()
+    {
+        // Creating and discarding large objects can cause LOH fragmentation
+        List<byte[]> largeObjects = new List<byte[]>();
+        
+        for (int i = 0; i < 10; i++)
+        {
+            largeObjects.Add(new byte[100000]); // Each ~100KB
+        }
+        
+        // Remove some objects creating "holes" in LOH
+        largeObjects.RemoveRange(0, 5); // Fragmentation risk
+        
+        // Force GC to see impact
+        GC.Collect();
+        Console.WriteLine("LOH fragmentation potential created");
+    }
+}
+```
+
+<Tip>
+**Array Pooling:** Use `ArrayPool\<T\>` to reuse large arrays and avoid LOH fragmentation.
+</Tip>
+
+## Why Memory Concepts are Important
+
+1. **Performance Optimization**: Understanding memory allocation patterns enables high-performance code
+2. **Resource Management**: Proper memory understanding prevents memory leaks
+3. **Scalability Foundation**: Efficient memory usage is fundamental for scalable applications
+
+## Advanced Nuances
+
+### Struct vs Class Allocation
+
+While structs typically go on the stack, they can end up on the heap when boxed, captured in closures, or when they're fields of a class:
+
+```csharp
+public struct Point { public int X, Y; }
+
+// Boxing example - struct goes to heap
+object boxedPoint = new Point(); // Heap allocation due to boxing
+
+// Closure capture - struct goes to heap
+Point p = new Point();
+Action action = () => p.X = 10; // Heap allocation for closure
+```
+
+### LOH Fragmentation and Array Pooling
+
+```csharp
+public void UsingArrayPool()
+{
+    var pool = ArrayPool<byte>.Shared;
+    byte[] largeBuffer = pool.Rent(90000); // Rent from pool instead of new
+    
+    try
+    {
+        // Use the buffer
+        ProcessData(largeBuffer);
+    }
+    finally
+    {
+        pool.Return(largeBuffer); // Return to pool
+    }
+}
+```
+
+### Generation 2 Pinning and GC Latency
+
+```csharp
+// Pinning can lead to GC issues
+byte[] buffer = new byte[100000];
+fixed (byte* ptr = buffer)
+{
+    // During this fixed block, GC cannot move the buffer
+    // Long-lived pins cause heap fragmentation
+}
+```
+
+## Roadmap Context
+
+Memory Concepts serves as the foundational pillar of the "Advanced Memory Management" section. It's a prerequisite for:
+
+- **Memory Profiling and Diagnostics**: Understanding generations for effective profiler use
+- **Performance Optimization Techniques**: Stack/heap behavior for high-performance data structures
+- **Advanced GC Tuning**: Configuring GC settings and implementing latency modes
+- **Unmanaged Memory Management**: Context for when to use unmanaged memory

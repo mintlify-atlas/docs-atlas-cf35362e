@@ -1,0 +1,236 @@
+---
+title: 'Endpoint Design'
+description: 'Structuring and organizing API entry points for consistent, intuitive, and maintainable interfaces'
+---
+
+## What is Endpoint Design?
+
+**Endpoint Design** (also known as *Route Design* or *API Endpoint Architecture*) is the practice of structuring and organizing the entry points of your web API. It defines how clients interact with your application through HTTP endpoints, encompassing URL patterns, parameter handling, and resource organization. 
+
+The core purpose is to create a **consistent, intuitive, and maintainable** interface that follows RESTful principles while solving the problem of **unstructured API sprawl** where endpoints become difficult to discover, document, and maintain over time.
+
+## How it works in C#
+
+### URL Structures
+
+**Explanation**: URL Structures define the hierarchical organization of your API endpoints using nouns (resources) rather than verbs (actions).
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
+{
+    // GET api/products
+    [HttpGet]
+    public IActionResult GetAllProducts() 
+    {
+        return Ok(new[] { new { Id = 1, Name = "Laptop" } });
+    }
+
+    // GET api/products/5
+    [HttpGet("{id}")]
+    public IActionResult GetProduct(int id)
+    {
+        return Ok(new { Id = id, Name = "Laptop" });
+    }
+
+    // POST api/products
+    [HttpPost]
+    public IActionResult CreateProduct([FromBody] ProductDto product)
+    {
+        return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+    }
+}
+```
+
+<Note>
+Use hierarchical URL structures that mirror your domain model for intuitive navigation.
+</Note>
+
+### URI Templating
+
+**Explanation**: URI Templating uses route parameters to create dynamic endpoints with placeholders that map to method parameters.
+
+```csharp
+[ApiController]
+public class OrdersController : ControllerBase
+{
+    // Advanced URI template with multiple parameters and constraints
+    [HttpGet("customers/{customerId:int}/orders/{orderId:guid}")]
+    public IActionResult GetOrder(int customerId, Guid orderId)
+    {
+        // {customerId:int} constrains parameter to integers only
+        // {orderId:guid} constrains parameter to GUID format
+        return Ok(new { CustomerId = customerId, OrderId = orderId });
+    }
+
+    // Optional parameters with default values
+    [HttpGet("search/{category?}/{minPrice?}")]
+    public IActionResult SearchProducts(string category = "all", decimal? minPrice = null)
+    {
+        return Ok(new { Category = category, MinPrice = minPrice });
+    }
+}
+```
+
+### Query/Matrix Parameters
+
+**Explanation**: Query parameters (after `?`) are used for filtering, pagination, and optional data.
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
+{
+    // Using query parameters for filtering and pagination
+    [HttpGet]
+    public IActionResult GetProducts(
+        [FromQuery] string category = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var filter = new ProductFilter 
+        { 
+            Category = category, 
+            MinPrice = minPrice,
+            Page = page,
+            PageSize = pageSize
+        };
+        
+        return Ok(await _productService.SearchAsync(filter));
+    }
+}
+```
+
+<Info>
+Query parameters are ideal for optional filters, sorting, and pagination that don't affect resource identity.
+</Info>
+
+### Custom Actions
+
+**Explanation**: For operations that don't fit CRUD patterns, use custom actions as sub-resources.
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class OrdersController : ControllerBase
+{
+    // Custom action on existing resource
+    [HttpPost("{id}/cancel")]
+    public IActionResult CancelOrder(int id)
+    {
+        _orderService.CancelOrder(id);
+        return Ok(new { Message = $"Order {id} cancelled" });
+    }
+
+    // Specialized endpoint for non-CRUD operations
+    [HttpPost("bulk-ship")]
+    public IActionResult BulkShipOrders([FromBody] int[] orderIds)
+    {
+        _shippingService.BulkShip(orderIds);
+        return Ok(new { ShippedOrders = orderIds.Length });
+    }
+}
+```
+
+### Nested Resources
+
+**Explanation**: Nested resources represent hierarchical relationships where child resources only exist in the context of their parent.
+
+```csharp
+[ApiController]
+public class CustomerOrdersController : ControllerBase
+{
+    // Nested resource: Orders belong to a specific customer
+    [HttpGet("api/customers/{customerId}/orders")]
+    public IActionResult GetCustomerOrders(int customerId)
+    {
+        var orders = _orderService.GetOrdersByCustomer(customerId);
+        return Ok(orders);
+    }
+
+    // Specific order within customer context
+    [HttpGet("api/customers/{customerId}/orders/{orderId}")]
+    public IActionResult GetCustomerOrder(int customerId, int orderId)
+    {
+        var order = _orderService.GetCustomerOrder(customerId, orderId);
+        if (order == null)
+            return NotFound();
+            
+        return Ok(order);
+    }
+
+    // Creating a new order for a specific customer
+    [HttpPost("api/customers/{customerId}/orders")]
+    public IActionResult CreateCustomerOrder(int customerId, [FromBody] OrderDto order)
+    {
+        order.CustomerId = customerId;
+        var createdOrder = _orderService.CreateOrder(order);
+        
+        return CreatedAtAction(
+            nameof(GetCustomerOrder), 
+            new { customerId, orderId = createdOrder.Id }, 
+            createdOrder);
+    }
+}
+```
+
+<Tip>
+Limit nesting depth to 2-3 levels to maintain URL readability and simplicity.
+</Tip>
+
+## Why is Endpoint Design Important?
+
+<Info>
+**Scalability through Resource-Oriented Architecture**: Well-designed endpoints isolate concerns and prevent dependency chains, allowing independent scaling following the Single Responsibility Principle.
+</Info>
+
+<Info>
+**Maintainability via DRY**: Consistent URL patterns and parameter handling reduce code duplication, making APIs easier to extend and refactor.
+</Info>
+
+<Info>
+**Discoverability through Intuitive Hierarchy**: Following RESTful conventions creates self-documenting APIs where clients can predict endpoint structures.
+</Info>
+
+## Advanced Nuances
+
+### Overlapping Route Ambiguity
+
+```csharp
+// Problem: Both routes could match "api/products/search/electronics"
+[HttpGet("search/{category}")]
+public IActionResult SearchByCategory(string category) { }
+
+[HttpGet("search/{id:int}")]
+public IActionResult SearchById(int id) { }
+
+// Solution: Use Order attribute or more specific constraints
+[HttpGet("search/category/{category}", Order = 1)]
+[HttpGet("search/id/{id:int}", Order = 2)]
+```
+
+<Warning>
+Use route constraints and ordering to prevent ambiguous route matching.
+</Warning>
+
+### HATEOAS for Self-Descriptive APIs
+
+```csharp
+[HttpGet("{id}")]
+public IActionResult GetProduct(int id)
+{
+    var product = _productService.GetProduct(id);
+    var response = new 
+    {
+        Product = product,
+        Links = new[]
+        {
+            new { Rel = "self", Href = Url.Action(nameof(GetProduct), new { id }) },
+            new { Rel = "orders", Href = Url.Action("GetProductOrders", new { productId = id }) }
+        }
+    };
+    return Ok(response);
+}
+```

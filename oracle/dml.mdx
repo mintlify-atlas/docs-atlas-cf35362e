@@ -1,0 +1,294 @@
+---
+title: 'Data Manipulation Language (DML)'
+description: 'Master the SQL commands for managing and modifying data within Oracle database tables'
+---
+
+## What is Data Manipulation Language (DML)?
+
+Data Manipulation Language (DML) is the subset of SQL commands exclusively responsible for managing and modifying the data stored within database tables. DML specifically refers to the **"CRUD" operations**: **C**reating (inserting), **R**eading (querying), **U**pdating, and **D**eleting data.
+
+<Note>
+The core purpose of DML is to enable applications to interact with and change the state of the data, solving the fundamental problem of persisting and maintaining application data in an organized, efficient, and controlled manner within a relational database.
+</Note>
+
+## INSERT Statement
+
+The `INSERT` statement adds new rows of data to a table. You specify the target table, the columns you're populating, and the corresponding values.
+
+```plsql
+DECLARE
+  v_emp_id employees.employee_id%TYPE := 1000;
+BEGIN
+  -- Inserting a single row using variables for dynamic values
+  INSERT INTO employees (
+    employee_id, first_name, last_name, email, hire_date, job_id
+  ) VALUES (
+    v_emp_id, 'Alice', 'Smith', 'ASMITH', SYSDATE, 'IT_PROG'
+  );
+  
+  DBMS_OUTPUT.PUT_LINE('Employee ' || v_emp_id || ' inserted.');
+  
+  -- Inserting multiple rows based on a SELECT query
+  INSERT INTO archived_employees (emp_id, name)
+  SELECT employee_id, first_name || ' ' || last_name
+  FROM employees
+  WHERE hire_date < DATE '2000-01-01';
+  
+  DBMS_OUTPUT.PUT_LINE('Archived old employees.');
+END;
+/
+```
+
+## UPDATE Statement
+
+The `UPDATE` statement modifies existing data in one or more rows of a table. You specify the table to update, the columns to change with their new values using the `SET` clause, and a `WHERE` clause to define which rows should be affected.
+
+<Warning>
+Omitting the WHERE clause will update *every* row in the table, which is often dangerous and requires caution.
+</Warning>
+
+```plsql
+DECLARE
+  v_department_id departments.department_id%TYPE := 60;
+  v_salary_increase_percent NUMBER := 0.10; -- 10% increase
+BEGIN
+  -- Update salaries for a specific department
+  UPDATE employees
+  SET salary = salary * (1 + v_salary_increase_percent)
+  WHERE department_id = v_department_id;
+  
+  -- Use SQL%ROWCOUNT to get the number of rows affected
+  DBMS_OUTPUT.PUT_LINE(SQL%ROWCOUNT || ' employees received a raise.');
+  
+  -- A more complex update using a subquery
+  UPDATE employees e
+  SET salary = (
+    SELECT MAX(salary) * 1.05
+    FROM employees
+    WHERE department_id = e.department_id
+  )
+  WHERE e.employee_id = 100;
+END;
+/
+```
+
+## DELETE Statement
+
+The `DELETE` statement removes one or more rows from a table. Similar to `UPDATE`, you specify the target table and a `WHERE` clause to identify the rows to be removed.
+
+```plsql
+DECLARE
+  v_cutoff_date DATE := ADD_MONTHS(SYSDATE, -60); -- 5 years ago
+BEGIN
+  -- Delete inactive orders older than 5 years
+  DELETE FROM orders
+  WHERE status = 'CANCELLED'
+  AND order_date < v_cutoff_date;
+  
+  DBMS_OUTPUT.PUT_LINE(SQL%ROWCOUNT || ' old orders purged.');
+  
+  -- Conditional delete based on program logic
+  IF some_condition THEN
+    DELETE FROM temp_logging_table;
+    DBMS_OUTPUT.PUT_LINE('Temporary log cleared.');
+  END IF;
+END;
+/
+```
+
+## MERGE Statement
+
+The `MERGE` statement (also known as UPSERT - UPDATE or INSERT) performs a conditional insert or update operation in a single, atomic statement.
+
+<Info>
+MERGE is powerful for synchronizing data between staging and production tables efficiently.
+</Info>
+
+```plsql
+BEGIN
+  -- Sync the target 'products' table with updates from 'products_staging'
+  MERGE INTO products t
+  USING products_staging s
+  ON (t.product_id = s.product_id)
+  WHEN MATCHED THEN
+    UPDATE SET
+      t.product_name = s.product_name,
+      t.price = s.price,
+      t.last_updated = SYSDATE
+    WHERE t.price != s.price -- Only update if the price actually changed
+  WHEN NOT MATCHED THEN
+    INSERT (product_id, product_name, price, created_date)
+    VALUES (s.product_id, s.product_name, s.price, SYSDATE);
+    
+  DBMS_OUTPUT.PUT_LINE('Products table synchronized.');
+END;
+/
+```
+
+## Transaction Control
+
+A transaction is a logical unit of work comprising one or more DML statements. Transaction control ensures **ACID properties (Atomicity, Consistency, Isolation, Durability)**.
+
+<Tip>
+Always use explicit transaction control (COMMIT/ROLLBACK) for data integrity.
+</Tip>
+
+```plsql
+BEGIN
+  -- This is a single transaction
+  UPDATE account SET balance = balance - 100 WHERE id = 1; -- Withdraw
+  UPDATE account SET balance = balance + 100 WHERE id = 2; -- Deposit
+  
+  -- If both updates succeed, make the changes permanent.
+  COMMIT;
+  DBMS_OUTPUT.PUT_LINE('Funds transferred successfully.');
+  
+EXCEPTION
+  -- If ANY error occurs, undo BOTH changes.
+  WHEN OTHERS THEN
+    ROLLBACK;
+    DBMS_OUTPUT.PUT_LINE('Transfer failed. Changes rolled back.');
+    RAISE; -- Re-raise the error to the calling environment
+END;
+/
+```
+
+## COMMIT Statement
+
+The `COMMIT` statement makes all changes performed in the current transaction permanent. Once a `COMMIT` is issued, the changes become visible to other database sessions.
+
+```plsql
+BEGIN
+  INSERT INTO audit_log (user_name, action) VALUES ('USER_A', 'Started process');
+  -- ... more DML operations ...
+  COMMIT; -- Finalize the entire batch of work
+END;
+/
+```
+
+## ROLLBACK Statement
+
+The `ROLLBACK` statement undoes all changes made in the current transaction, reverting the database to its state before the transaction began.
+
+```plsql
+BEGIN
+  SAVEPOINT before_complex_operation;
+  
+  -- Complex multi-step process...
+  UPDATE table_a ...;
+  DELETE FROM table_b ...;
+  
+  IF some_business_rule_is_violated THEN
+    ROLLBACK TO before_complex_operation; -- Or just ROLLBACK;
+    DBMS_OUTPUT.PUT_LINE('Operation aborted.');
+  ELSE
+    COMMIT;
+  END IF;
+END;
+/
+```
+
+## SAVEPOINT Statement
+
+The `SAVEPOINT` statement sets a named point within a transaction to which you can later roll back.
+
+<Info>
+SAVEPOINT allows for partial rollbacks without undoing the entire transaction.
+</Info>
+
+```plsql
+BEGIN
+  INSERT INTO main_table (data) VALUES ('Step 1 Data');
+  SAVEPOINT after_step_1;
+  
+  BEGIN
+    -- A risky operation that might fail
+    UPDATE another_table SET ...;
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- On failure, only undo the risky step, keeping the initial insert.
+      ROLLBACK TO after_step_1;
+      DBMS_OUTPUT.PUT_LINE('Risky step failed, rolled back to savepoint.');
+  END;
+  
+  -- This insert will happen regardless of the above exception
+  INSERT INTO main_table (data) VALUES ('Final Step Data');
+  COMMIT;
+END;
+/
+```
+
+## Why is DML Important?
+
+### Enables Data Integrity through Atomicity (ACID)
+
+DML operations wrapped in transactions ensure that complex business operations (like a financial transfer) succeed or fail completely, preventing data corruption and maintaining logical consistency.
+
+### Promotes Modularity and the DRY Principle
+
+By encapsulating DML logic within well-defined PL/SQL procedures and functions, you avoid scattering raw SQL across an application. This centralizes business rules, making the codebase more maintainable, testable, and secure.
+
+### Facilitates Performance and Scalability
+
+Using set-based DML operations (like a single `UPDATE` affecting thousands of rows) is vastly more efficient than procedural row-by-row processing.
+
+## Advanced Nuances
+
+### RETURNING INTO Clause
+
+<Tip>
+Use RETURNING INTO to avoid extra queries after DML operations.
+</Tip>
+
+```plsql
+DECLARE
+  v_new_key NUMBER;
+BEGIN
+  INSERT INTO my_table (id, data)
+  VALUES (my_seq.NEXTVAL, 'New Data')
+  RETURNING id INTO v_new_key; -- Capture the new sequence value immediately
+END;
+/
+```
+
+### Bulk Operations (FORALL)
+
+For performance-critical applications, use `FORALL` to send batches of DML statements:
+
+```plsql
+DECLARE
+  TYPE IdList IS TABLE OF NUMBER;
+  l_ids IdList := IdList(101, 102, 103);
+BEGIN
+  FORALL i IN l_ids.FIRST .. l_ids.LAST
+    UPDATE employees SET salary = salary * 1.1
+    WHERE employee_id = l_ids(i);
+END;
+/
+```
+
+### INSTEAD OF Triggers
+
+<Warning>
+On complex views involving joins, use INSTEAD OF triggers to enable DML operations.
+</Warning>
+
+An `INSTEAD OF` trigger can be created on a view to intercept DML commands and redirect them to the appropriate base tables with custom logic.
+
+## How This Fits the Roadmap
+
+Within the "Advanced SQL Features" section of the PL/SQL Mastery roadmap, DML is the **fundamental bedrock**.
+
+### Prerequisites For:
+
+- **Dynamic SQL** - `EXECUTE IMMEDIATE` with DML
+- **Bulk Processing** - `BULK COLLECT`, `FORALL`
+- **Advanced Cursors** - Updating rows fetched from a cursor
+
+### Unlocks:
+
+- Robust data processing logic
+- High-performance ETL processes
+- Complex business rules in stored procedures
+- Sophisticated triggers
+- Scalable, reliable database-centric applications

@@ -1,0 +1,223 @@
+---
+title: 'ASP.NET MVC'
+description: 'Build modern web applications with the Model-View-Controller pattern - routing, controllers, views, models, and action filters'
+---
+
+## What is ASP.NET MVC?
+
+**ASP.NET MVC** is a web application framework based on **Model-View-Controller (MVC)** pattern, built on top of the .NET Framework.
+
+<Info>
+It provides a structured way to develop dynamic websites, enabling clean separation of concerns, testability, and full control over HTML. Its core purpose is to build scalable, maintainable web applications by separating business logic (Model), UI logic (View), and input handling (Controller).
+</Info>
+
+## How it works in C#
+
+### Model-View-Controller (MVC)
+
+The MVC pattern divides application responsibilities into three interconnected components:
+
+<Note>
+- **Model**: Represents data and business logic (e.g., entity classes, validation rules)
+- **View**: Renders the UI (typically Razor `.cshtml` files)
+- **Controller**: Handles user input, interacts with the Model, and selects the View
+</Note>
+
+```csharp
+// Model
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+// Controller
+public class ProductController : Controller
+{
+    // Action method
+    public ActionResult Index()
+    {
+        var model = new Product { Id = 1, Name = "Laptop" };
+        return View(model); // Pass model to View
+    }
+}
+
+// View (Index.cshtml)
+@model Namespace.Product // Strongly-typed Model
+<h2>@Model.Name</h2> <!-- Render model data -->
+```
+
+**Why MVC Matters:**
+- **Separation of Concerns**: Models, Views, and Controllers are independent, making code easier to maintain
+- **Testability**: Controllers can be unit-tested without needing a web server
+- **Control over HTML**: No automatic view state or server controls, leading to cleaner markup
+
+### Routing
+
+<Tip>
+Routing maps incoming URLs to specific controller actions. Configured in `RouteConfig.cs` via the `MapRoute` method.
+</Tip>
+
+```csharp
+// RouteConfig.cs
+public class RouteConfig
+{
+    public static void RegisterRoutes(RouteCollection routes)
+    {
+        routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+        
+        // Default convention: {controller}/{action}/{id}
+        routes.MapRoute(
+            name: "Default",
+            url: "{controller}/{action}/{id}",
+            defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
+        );
+    }
+}
+
+// Example: URL "/Product/Details/5" maps to:
+public class ProductController : Controller
+{
+    public ActionResult Details(int id) // id = 5
+    {
+        // Fetch product by id
+        return View();
+    }
+}
+```
+
+**Advanced Nuance**: Custom constraints (e.g., `{id:int}`) or attribute routing (`[Route]`) allow fine-grained URL patterns.
+
+### Controllers
+
+Controllers are C# classes inheriting from `Controller` that handle HTTP requests. Each public method is an **action** returning an `ActionResult` (e.g., `ViewResult`, `JsonResult`).
+
+```csharp
+public class HomeController : Controller
+{
+    public ActionResult Index()
+    {
+        return View(); // Renders ~/Views/Home/Index.cshtml
+    }
+
+    [HttpPost] // Attribute for HTTP verb filtering
+    public ActionResult SubmitForm(FormModel model)
+    {
+        if (ModelState.IsValid)
+        {
+            // Process data
+            return RedirectToAction("Success");
+        }
+        return View("Index", model);
+    }
+}
+```
+
+**Best Practices:**
+- Keep controllers thin—delegate business logic to services
+- Use action filters for cross-cutting concerns (e.g., logging)
+
+### Views
+
+<Note>
+Views are Razor templates (`.cshtml`) that generate HTML. Supports strong typing, layouts, and partial views.
+</Note>
+
+```html
+<!-- ~/Views/Home/Index.cshtml -->
+@model MyApp.Models.Product // Strongly-typed model
+@{
+    ViewBag.Title = "Product Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<h1>@Model.Name</h1>
+@Html.Partial("_ProductInfo", Model) <!-- Reusable partial -->
+```
+
+**Advanced Nuance**: Use `@Html.ActionLink` or `Url.Action` to generate URLs dynamically, avoiding hard-coded paths.
+
+### Models
+
+Models are C# classes representing data. Often include validation attributes from `System.ComponentModel.DataAnnotations`.
+
+```csharp
+public class LoginModel
+{
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress]
+    public string Email { get; set; }
+
+    [Required]
+    [DataType(DataType.Password)]
+    public string Password { get; set; }
+}
+
+// In controller:
+public ActionResult Login(LoginModel model)
+{
+    if (ModelState.IsValid) // Validation check
+    {
+        // Proceed with login
+    }
+    return View(model);
+}
+```
+
+**Why Models Matter:**
+- Centralize validation rules
+- Enable model binding—automatic mapping of form data to C# objects
+
+### Action Filters
+
+<Tip>
+Action filters are attributes applied to controllers or actions to inject pre/post-processing logic (e.g., authentication, logging).
+</Tip>
+
+```csharp
+// Custom filter
+public class LogActionFilter : ActionFilterAttribute
+{
+    public override void OnActionExecuting(ActionExecutingContext filterContext)
+    {
+        Log("Action executing: " + filterContext.ActionDescriptor.ActionName);
+    }
+}
+
+// Usage:
+[LogActionFilter]
+public class HomeController : Controller
+{
+    [CustomAuthorize] // Built-in filter for authentication
+    public ActionResult Admin()
+    {
+        return View();
+    }
+}
+```
+
+**Common Filters:**
+- `[Authorize]`: Restricts access to authenticated users
+- `[HandleError]`: Catches exceptions and displays error views
+- `[OutputCache]`: Caches action output
+
+## Why is ASP.NET MVC important?
+
+1. **Separation of Concerns**: Adheres to the **Single Responsibility Principle** (SRP)—each component has a distinct role.
+
+2. **Test-Driven Development (TDD)**: Controllers and models can be mocked and tested in isolation.
+
+3. **Flexibility**: No reliance on view state or server controls, allowing modern front-end integration (e.g., Angular, React).
+
+## How this fits the Roadmap
+
+**Prerequisite For:**
+- **ASP.NET Core MVC** (the modern evolution)
+- **Web APIs** (MVC controllers can return JSON/XML)
+- **Advanced Patterns** (e.g., Repository Pattern, Dependency Injection)
+
+**Unlocks:**
+- **Middleware Pipeline** (ASP.NET Core's request handling)
+- **Razor Pages** (a simplified alternative for page-focused scenarios)
+- **Blazor** (component-based UI framework)
+
+By mastering ASP.NET MVC, you build a solid foundation for modern .NET web development, understanding how HTTP requests flow through controllers, models, and views—essential for advancing to cloud-native or microservices architectures.

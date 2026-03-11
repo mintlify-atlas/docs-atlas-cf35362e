@@ -1,0 +1,241 @@
+---
+title: 'Cursors'
+description: 'Master the fundamental mechanism for processing multi-row query results in PL/SQL'
+---
+
+## What is a Cursor?
+
+In PL/SQL, a **cursor** is a pointer or a handle to a private SQL area that stores information about the processing of a specific `SELECT` or DML statement.
+
+<Note>
+Think of it as a named control structure you use to traverse through the results of a query, one row at a time.
+</Note>
+
+While the `SELECT...INTO` statement can handle single-row results, cursors are the fundamental mechanism for processing multi-row queries.
+
+### Core Purpose
+
+The cursor solves the "impedance mismatch" between the set-based nature of SQL and the procedural, record-at-a-time nature of PL/SQL. It allows a procedural program to process the rows returned by a set-based query sequentially, applying complex business logic to each individual row.
+
+## Implicit Cursors
+
+Implicit cursors are automatically created and managed by the PL/SQL engine whenever you execute a SQL statement directly in your code. You do not declare them. The most recent implicit cursor is always accessible via the `SQL` cursor attribute.
+
+```plsql
+DECLARE
+  l_employee_name employees.last_name%TYPE;
+  l_rows_updated NUMBER;
+BEGIN
+  -- 1. Implicit cursor for a SELECT...INTO
+  SELECT last_name INTO l_employee_name
+  FROM employees
+  WHERE employee_id = 100;
+
+  DBMS_OUTPUT.PUT_LINE('Employee name is: ' || l_employee_name);
+
+  -- 2. Implicit cursor for a DML operation (UPDATE)
+  UPDATE employees
+  SET salary = salary * 1.10
+  WHERE department_id = 50;
+
+  -- Using the implicit SQL% cursor attribute
+  l_rows_updated := SQL%ROWCOUNT;
+  DBMS_OUTPUT.PUT_LINE('Number of employees updated: ' || l_rows_updated);
+
+END;
+/
+```
+
+## Explicit Cursors
+
+Explicit cursors are programmer-defined cursors for handling multi-row queries. They give you precise control over the execution cycle: `OPEN`, `FETCH`, and `CLOSE`.
+
+<Info>
+Explicit cursors are essential when you need to process more than one row or when using advanced features like FOR UPDATE.
+</Info>
+
+```plsql
+DECLARE
+  -- 1. DECLARE the cursor
+  CURSOR c_high_paid_employees IS
+    SELECT employee_id, last_name, salary
+    FROM employees
+    WHERE salary > 15000
+    ORDER BY salary DESC;
+
+  -- Record variable to hold the fetched data
+  r_employee c_high_paid_employees%ROWTYPE;
+BEGIN
+  -- 2. OPEN the cursor (executes the query)
+  OPEN c_high_paid_employees;
+
+  LOOP
+    -- 3. FETCH a row from the cursor result set
+    FETCH c_high_paid_employees INTO r_employee;
+    -- 4. Check if a row was fetched using the %NOTFOUND attribute
+    EXIT WHEN c_high_paid_employees%NOTFOUND;
+
+    -- Process the fetched row
+    DBMS_OUTPUT.PUT_LINE(
+      'EmpID: ' || r_employee.employee_id ||
+      ', Name: ' || r_employee.last_name ||
+      ', Salary: ' || r_employee.salary
+    );
+  END LOOP;
+
+  -- 5. CLOSE the cursor to free resources
+  CLOSE c_high_paid_employees;
+END;
+/
+```
+
+## OPEN Statement
+
+The `OPEN` statement is the first step in the lifecycle of an explicit cursor. It allocates memory for the cursor, parses the `SELECT` statement, binds any input variables, and executes the query.
+
+<Tip>
+The result set is identified, and the cursor is positioned *before* the first row.
+</Tip>
+
+```plsql
+OPEN cursor_name;
+-- If the cursor has parameters: OPEN cursor_name(parameter_value);
+```
+
+## FETCH Statement
+
+The `FETCH` statement retrieves the next row from the active result set of an open cursor and assigns the column values to PL/SQL variables or a record variable. Each `FETCH` advances the cursor to the next row.
+
+```plsql
+FETCH cursor_name INTO variable1, variable2, ...;
+-- Or into a record variable
+FETCH cursor_name INTO record_variable;
+```
+
+## CLOSE Statement
+
+The `CLOSE` statement deactivates the cursor and releases the memory associated with it. Once closed, the result set is no longer accessible.
+
+<Info>
+It is good practice to explicitly close cursors you have opened, though they will be closed implicitly when the block terminates.
+</Info>
+
+```plsql
+CLOSE cursor_name;
+```
+
+## Cursor Attributes
+
+Cursor attributes return valuable information about the state of a cursor. They can be used with both implicit (`SQL%`) and explicit (`cursor_name%`) cursors.
+
+- **`%FOUND`**: Returns `TRUE` if the last `FETCH` returned a row
+- **`%NOTFOUND`**: Returns `TRUE` if the last `FETCH` did *not* return a row (most common for loop exits)
+- **`%ISOPEN`**: Returns `TRUE` if the cursor is open
+- **`%ROWCOUNT`**: Returns the number of rows fetched so far
+
+```plsql
+FETCH my_cursor INTO my_record;
+IF my_cursor%NOTFOUND THEN
+  DBMS_OUTPUT.PUT_LINE('No more rows found.');
+END IF;
+DBMS_OUTPUT.PUT_LINE('Rows processed: ' || my_cursor%ROWCOUNT);
+```
+
+## FOR UPDATE Clause
+
+The `FOR UPDATE` clause is part of an explicit cursor declaration. It locks the selected rows in the database when the cursor is opened. This prevents other sessions from modifying these rows until your transaction is committed or rolled back.
+
+<Warning>
+FOR UPDATE is crucial for ensuring data consistency in multi-user environments when you intend to update the rows you are fetching.
+</Warning>
+
+```plsql
+DECLARE
+  CURSOR c_emp_dept_50 IS
+    SELECT employee_id, salary
+    FROM employees
+    WHERE department_id = 50
+    FOR UPDATE; -- Locks the rows for department 50
+BEGIN
+  FOR emp_rec IN c_emp_dept_50
+  LOOP
+    UPDATE employees
+    SET salary = emp_rec.salary * 1.05
+    WHERE CURRENT OF c_emp_dept_50; -- Efficiently updates the current cursor row
+  END LOOP;
+  COMMIT;
+END;
+/
+```
+
+## WHERE CURRENT OF
+
+The `WHERE CURRENT OF` clause is used in an `UPDATE` or `DELETE` statement to reference the *current row* from an explicit cursor that was declared with `FOR UPDATE`.
+
+<Tip>
+It is more efficient and safer than using a primary key in the WHERE clause, as it precisely targets the row the cursor is positioned on.
+</Tip>
+
+```plsql
+WHERE CURRENT OF cursor_name
+```
+
+## Why is Cursors Important?
+
+### Separation of Concerns
+
+**SOLID Principle**: Cursors separate the definition of the dataset (the `SELECT` statement) from the procedural logic that processes it, leading to cleaner, more maintainable code.
+
+### Controlled Resource Management
+
+Explicit cursors provide deterministic control over memory and locks (`OPEN`, `CLOSE`), preventing resource leaks and allowing for efficient handling of large result sets, which is crucial for **Scalability**.
+
+### Enables Complex Row-by-Row Logic
+
+**Record Pattern**: Cursors are the primary tool for implementing business logic that is too complex for a single, set-based SQL operation.
+
+## Advanced Nuances
+
+### Cursor Variables (REF CURSORS)
+
+An advanced variation is the cursor variable, or `REF CURSOR`. Unlike static explicit cursors, `REF CURSORS` can be opened for different queries at runtime.
+
+<Info>
+REF CURSORS are the foundation for returning result sets from stored procedures and are heavily used in Oracle APEX.
+</Info>
+
+### Parameterized Cursors
+
+Explicit cursors can accept parameters, making them reusable with different inputs. This applies the **DRY (Don't Repeat Yourself)** principle:
+
+```plsql
+CURSOR c_emp_by_dept (p_dept_id NUMBER) IS
+  SELECT * FROM employees WHERE department_id = p_dept_id;
+...
+OPEN c_emp_by_dept(50);
+```
+
+### Implicit Cursor Gotchas
+
+<Warning>
+A common pitfall is the NO_DATA_FOUND exception. A SELECT...INTO that returns no rows raises this exception, but an explicit cursor FETCH simply sets %NOTFOUND to TRUE.
+</Warning>
+
+This distinction is critical for robust error handling.
+
+## How This Fits the Roadmap
+
+Within the "PL/SQL Programming" section of the Advanced PL/SQL Mastery roadmap, Cursors are a **fundamental building block**.
+
+### Prerequisite For:
+
+- **Exception Handling** - Understanding `%NOTFOUND` vs. `NO_DATA_FOUND`
+- **Bulk Processing** (`BULK COLLECT`, `FORALL`) - Natural evolution of cursor loops
+- **Dynamic SQL** - `REF CURSORS` are often used with `EXECUTE IMMEDIATE`
+
+### Unlocks:
+
+- Efficient, scalable data processing routines
+- Sophisticated database applications
+- Complex multi-step data transformations
+- Advanced reporting logic

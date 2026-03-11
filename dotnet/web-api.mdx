@@ -1,0 +1,261 @@
+---
+title: 'ASP.NET Web API'
+description: 'Build RESTful HTTP services with ASP.NET Web API - HTTP methods, routing, controllers, media formatters, and security'
+---
+
+## What is ASP.NET Web API?
+
+ASP.NET Web API is a framework for building HTTP-based services that can be consumed by a wide range of clients, including browsers, mobile devices, and other applications.
+
+<Info>
+Its core purpose is to provide a robust, REST-ful (Representational State Transfer) platform for creating services that are not tied to a specific client technology. The primary problem it solves is enabling the creation of backend services for modern, multi-platform applications by providing a standardized way to expose data and operations over HTTP.
+</Info>
+
+## How it works in C#
+
+### HTTP Methods
+
+<Note>
+HTTP methods (also called verbs) define the action to be performed on a resource identified by a URI. Web API maps these verbs to controller actions, creating a clear and standardized contract.
+</Note>
+
+The primary methods are:
+- **GET**: Retrieves a representation of a resource (safe and idempotent)
+- **POST**: Creates a new resource (neither safe nor idempotent)
+- **PUT**: Updates an existing resource or creates it if it doesn't exist (idempotent)
+- **DELETE**: Removes a resource (idempotent)
+- **PATCH**: Partially updates a resource
+
+```csharp
+public class ProductsController : ApiController
+{
+    private readonly IProductRepository _repository;
+
+    public ProductsController(IProductRepository repository)
+    {
+        _repository = repository;
+    }
+
+    // GET api/products
+    public IHttpActionResult Get()
+    {
+        // Retrieves all products
+        var products = _repository.GetAll();
+        return Ok(products); // Returns 200 OK with the list
+    }
+
+    // GET api/products/5
+    public IHttpActionResult Get(int id)
+    {
+        // Retrieves a specific product by ID
+        var product = _repository.GetById(id);
+        if (product == null)
+        {
+            return NotFound(); // Returns 404 Not Found if resource doesn't exist
+        }
+        return Ok(product); // Returns 200 OK with the product
+    }
+
+    // POST api/products
+    public IHttpActionResult Post([FromBody] Product product)
+    {
+        // Creates a new product from the request body
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState); // Returns 400 Bad Request for invalid data
+        }
+        var createdProduct = _repository.Add(product);
+        return Created($"api/products/{createdProduct.Id}", createdProduct); // Returns 201 Created
+    }
+
+    // PUT api/products/5
+    public IHttpActionResult Put(int id, [FromBody] Product product)
+    {
+        // Fully updates the product with the given ID
+        if (!ModelState.IsValid || id != product.Id)
+        {
+            return BadRequest();
+        }
+        _repository.Update(product);
+        return StatusCode(HttpStatusCode.NoContent); // Returns 204 No Content
+    }
+
+    // DELETE api/products/5
+    public IHttpActionResult Delete(int id)
+    {
+        // Deletes the product with the given ID
+        var product = _repository.GetById(id);
+        if (product == null)
+        {
+            return NotFound();
+        }
+        _repository.Delete(id);
+        return StatusCode(HttpStatusCode.NoContent);
+    }
+}
+```
+
+### RESTful Principles
+
+REST (Representational State Transfer) is an architectural style that uses HTTP protocols effectively. Key principles implemented in Web API include:
+
+<Tip>
+- **Statelessness**: Each request from a client must contain all the information needed to process it
+- **Resource-Based**: Everything is a resource, identified by URIs (e.g., `/api/products/1`)
+- **Uniform Interface**: Using standard HTTP methods (GET, POST, etc.)
+- **Representation**: Resources can have multiple representations (JSON, XML)
+</Tip>
+
+### Routing
+
+Routing is how Web API maps an incoming HTTP request to a specific action on a controller. The default convention is "Attribute Routing," which provides fine-grained control by placing route templates directly on controllers and actions.
+
+```csharp
+// At the controller level, define a base route
+[RoutePrefix("api/products")] // All actions in this controller will be prefixed with 'api/products'
+public class ProductsController : ApiController
+{
+    // GET api/products
+    [Route("")] // Matches the base route
+    public IHttpActionResult Get() { /* ... */ }
+
+    // GET api/products/5
+    [Route("{id:int}")] // Constrains the 'id' parameter to be an integer
+    public IHttpActionResult Get(int id) { /* ... */ }
+
+    // POST api/products/search
+    [Route("search")] // Creates a more specific route for a custom action
+    [HttpPost] // Explicitly binds this action to the POST verb
+    public IHttpActionResult SearchProducts([FromBody] SearchModel criteria) { /* ... */ }
+
+    // GET api/products/category/electronics
+    [Route("category/{categoryName}")] // Demonstrates a more complex route
+    public IHttpActionResult GetByCategory(string categoryName) { /* ... */ }
+}
+```
+
+### Controllers
+
+Controllers are the central class that handles HTTP requests. They contain action methods that correspond to the various operations on a resource.
+
+<Note>
+In Web API, controllers inherit from `ApiController`, which provides essential Web API functionality like request/response handling, content negotiation, and model binding.
+</Note>
+
+### Media Type Formatters
+
+Formatters are components that serialize and deserialize HTTP message bodies. They handle the conversion between CLR (Common Language Runtime) objects and the data format (like JSON or XML) sent over the wire.
+
+<Info>
+Web API uses content negotiation ("conneg") to select the appropriate formatter based on the request's `Accept` header.
+</Info>
+
+```csharp
+// You can customize formatters in App_Start/WebApiConfig.cs
+public static class WebApiConfig
+{
+    public static void Register(HttpConfiguration config)
+    {
+        // Remove the default XML formatter to force JSON responses
+        // config.Formatters.Remove(config.Formatters.XmlFormatter);
+
+        // Or, customize the JSON formatter (e.g., use camelCase for property names)
+        var jsonFormatter = config.Formatters.JsonFormatter;
+        jsonFormatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+
+        // Attribute Routing
+        config.MapHttpAttributeRoutes();
+    }
+}
+
+// In a Controller, you can force a specific format for an action
+public class DataController : ApiController
+{
+    [Route("data")]
+    [HttpGet]
+    public HttpResponseMessage GetData()
+    {
+        var data = new { Value = 42, Message = "Hello" };
+        // Force the response to be XML, ignoring the Accept header
+        return Request.CreateResponse(HttpStatusCode.OK, data, Configuration.Formatters.XmlFormatter);
+    }
+}
+```
+
+### Security
+
+Securing a Web API is critical. Key areas include:
+- **Authentication**: Verifying the identity of the client (JWT, OAuth, API keys)
+- **Authorization**: Determining if an authenticated user has permission to perform an action
+- **HTTPS**: Enforcing encrypted communication to protect data in transit
+- **CORS**: Allowing or denying requests from different domains
+
+```csharp
+// Require authentication for all actions in the controller
+[Authorize]
+[RoutePrefix("api/orders")]
+public class OrdersController : ApiController
+{
+    // This action can only be called by authenticated users
+    public IHttpActionResult Get() { /* ... */ }
+
+    // Require users to be in the "Admin" role for this specific action
+    [Authorize(Roles = "Admin")]
+    [HttpDelete]
+    [Route("{id}")]
+    public IHttpActionResult Delete(int id) { /* ... */ }
+
+    // Allow anonymous access to a specific action
+    [AllowAnonymous]
+    [HttpGet]
+    [Route("public")]
+    public IHttpActionResult GetPublicInfo() { /* ... */ }
+}
+
+// Enable CORS in the WebApiConfig (install Microsoft.AspNet.WebApi.Cors first)
+public static class WebApiConfig
+{
+    public static void Register(HttpConfiguration config)
+    {
+        var cors = new EnableCorsAttribute("https://trustedclient.com", "*", "GET,POST");
+        config.EnableCors(cors);
+        // ...
+    }
+}
+```
+
+## Why is ASP.NET Web API important?
+
+1. **Separation of Concerns (from SOLID)**: It enforces a clear separation between the backend service logic and the client UI, allowing both to be developed, scaled, and maintained independently.
+
+2. **Interoperability and Scalability**: By adhering to open standards like HTTP and REST, it can serve any client capable of making HTTP requests (web, mobile, desktop, IoT).
+
+3. **Maintainability (DRY - Don't Repeat Yourself)**: It provides a centralized, reusable service layer so that business logic doesn't need to be duplicated across different client applications.
+
+## Advanced Nuances
+
+### Content Negotiation for Custom Media Types
+
+<Tip>
+Beyond JSON/XML, you can create custom formatters to support other formats like Protocol Buffers (ProtoBuf) or MessagePack for high-performance scenarios.
+</Tip>
+
+### API Versioning
+
+A critical concept for maintaining a public API. It can be implemented via attributes, route constraints, or query string parameters using libraries like `Microsoft.AspNet.WebApi.Versioning`.
+
+### Advanced Routing with Constraints and Defaults
+
+```csharp
+// You can create highly specific routes using powerful constraints
+[Route("users/{id:int:min(1)}")] // Ensures the id is a positive integer
+public IHttpActionResult GetUser(int id) { /* ... */ }
+```
+
+## How this fits the Roadmap
+
+Within the "Web Development" section of the Advanced C# Mastery roadmap, ASP.NET Web API is a **fundamental building block for backend service development**. It is a prerequisite for more advanced topics:
+
+- **Advanced API Topics**: Implementing Hypermedia (HATEOAS), advanced security with OAuth 2.0, and real-time communication with SignalR
+- **Microservices Architecture**: Web API is the primary technology for building individual, loosely-coupled services
+- **Deployment and Infrastructure**: Essential for learning about containerization (Docker), cloud deployment (Azure/AWS), API Gateways, and serverless functions
